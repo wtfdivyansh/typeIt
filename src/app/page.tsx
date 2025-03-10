@@ -7,12 +7,16 @@ export default function Home() {
   const [currentWord, setCurrentWord] = useState("");
   const [currentParagraph, setCurrentParagraph] = useState("");
   const [idx, setIdx] = useState(0);
+  const [prevCorrect, setPrevCorrect] = useState(false);
   const wordsArray = paragraph.split(" ");
   const myWordsArray = currentParagraph.split(" ");
   let isWordCorrect = false;
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if(e.target.value == "" && e.target.value.length === 0) {
+    if( e.target.value.trim().length === 0 ) {
       return
+    }
+    if(currentWord === " "){
+      setPrevCorrect(false);
     }
     if(e.target.value.slice(-1) === " " &&  currentParagraph.slice(-1) === " ") {
       setCurrentWord("");
@@ -20,10 +24,12 @@ export default function Home() {
       return
     }
     const lastChar = e.target.value.slice(-1);
+    const isNew = e.target.value.length > currentParagraph.length;
     console.log("lastChar", lastChar);
     setCurrentChar(e.target.value.slice(0, 1));
     setCurrentWord((prev) => prev + lastChar);
-    if (lastChar === " " && e.target.value.length >0) {
+    // console.log(e.target.value.length)
+    if (lastChar === " " && isNew) {
       isWordCorrect = wordCorrect();
       setCurrentWord("");
       setIdx((prev) => prev + 1);
@@ -50,16 +56,13 @@ export default function Home() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Backspace") {
-        console.log("Backspace key pressed");
-        if (currentChar === "" && currentWord === "" && currentParagraph.length>0) {
-          const prevParagraph = currentParagraph.slice(0, -1);
-          console.log("prevParagraph", prevParagraph,currentParagraph);
-          console.log("sliced", currentParagraph.slice(-1));
-          setCurrentWord(currentParagraph.slice(-1));
-          setCurrentParagraph((prev) => prev.slice(0, -1));
-          setIdx((prev) => prev - 1);
-          setCurrentWord(myWordsArray[idx]);
-        }
+        let isCorrect = myWordsArray[idx-1] === wordsArray[idx-1];
+       if(currentChar === "" && currentWord === "" && isCorrect) {
+         setPrevCorrect(true);
+         return
+       }
+       setIdx((prev) => prev - 1);
+       setPrevCorrect(false);
       }
       if (event.key === "Space" || event.key=== " ") {
         // if(currentChar === "" && currentWord === "") {
