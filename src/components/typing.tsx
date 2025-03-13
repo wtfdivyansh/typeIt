@@ -93,9 +93,9 @@ export default function Typing() {
 
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <div ref={containerRef} className="w-1/2 text-neutral-300 relative">
+      <div ref={containerRef} className="w-2/3 text-neutral-300 relative">
         <div className="w-full relative">
-          <div>
+          <div className="line-clamp-3 font-mono text-3xl tracking-wide">
             {wordsArray.map((word, wordIndex) => {
               const typedWord = paragraph[wordIndex] || "";
               const extraChars =
@@ -106,7 +106,9 @@ export default function Typing() {
               return (
                 <div
                   key={wordIndex}
-                  className="inline-block mr-2"
+                  className={cn("inline-block mr-6",{
+
+                  })}
                   ref={(el) => {
                     if (el) {
                       wordRefs.current[wordIndex] = el;
@@ -121,8 +123,8 @@ export default function Typing() {
                       <span
                         key={letterIndex}
                         className={cn("text-neutral-600 font-mono", {
-                          "text-green-500": actualLetter === typedLetter,
-                          "text-yellow-500":
+                          "text-neutral-100": actualLetter === typedLetter,
+                          "text-red-400":
                             actualLetter !== typedLetter && typedLetter !== " ",
                         })}
                       >
@@ -132,7 +134,7 @@ export default function Typing() {
                   })}
 
                   {extraChars.map((letter, extraIndex) => (
-                    <span key={extraIndex} className="text-red-500 font-mono">
+                    <span key={extraIndex} className="text-orange-700 font-mono">
                       {letter}
                     </span>
                   ))}
@@ -142,7 +144,7 @@ export default function Typing() {
           </div>
         </div>
         <span
-          className="bg-green-500 h-6 w-[2px] absolute"
+          className="bg-sky-300/80 h-10 w-[3px] absolute"
           style={{
             top: caretPosition.y,
             left: caretPosition.x,
