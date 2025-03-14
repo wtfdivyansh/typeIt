@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@uidotdev/usehooks": "^2.4.1",
     "babel-plugin-react-compiler": "^19.0.0-beta-bafa41b-20250307",
     "clsx": "^2.1.1",
     "lucide-react": "^0.479.0",

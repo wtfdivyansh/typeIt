@@ -4,6 +4,7 @@
     "": {
       "name": "typeit",
       "dependencies": {
+        "@uidotdev/usehooks": "^2.4.1",
         "babel-plugin-react-compiler": "^19.0.0-beta-bafa41b-20250307",
         "clsx": "^2.1.1",
         "lucide-react": "^0.479.0",
@@ -192,6 +193,8 @@
     "@typescript-eslint/utils": ["@typescript-eslint/utils@8.26.0", "", { "dependencies": { "@eslint-community/eslint-utils": "^4.4.0", "@typescript-eslint/scope-manager": "8.26.0", "@typescript-eslint/types": "8.26.0", "@typescript-eslint/typescript-estree": "8.26.0" }, "peerDependencies": { "eslint": "^8.57.0 || ^9.0.0", "typescript": ">=4.8.4 <5.9.0" } }, "sha512-2L2tU3FVwhvU14LndnQCA2frYC8JnPDVKyQtWFPf8IYFMt/ykEN1bPolNhNbCVgOmdzTlWdusCTKA/9nKrf8Ig=="],
 
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.26.0", "", { "dependencies": { "@typescript-eslint/types": "8.26.0", "eslint-visitor-keys": "^4.2.0" } }, "sha512-2z8JQJWAzPdDd51dRQ/oqIJxe99/hoLIqmf8RMCAJQtYDc535W/Jt2+RTP4bP0aKeBG1F65yjIZuczOXCmbWwg=="],
+
+    "@uidotdev/usehooks": ["@uidotdev/usehooks@2.4.1", "", { "peerDependencies": { "react": ">=18.0.0", "react-dom": ">=18.0.0" } }, "sha512-1I+RwWyS+kdv3Mv0Vmc+p0dPYH0DTRAo04HLyXReYBL9AeseDWUJyi4THuksBJcu9F0Pih69Ak150VDnqbVnXg=="],
 
     "acorn": ["acorn@8.14.1", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-OvQ/2pUDKmgfCg++xsTX1wGxfTaszcHVcTctW4UJB4hibJx2HXxxO5UmVgyjMa+ZDsiaf5wWLXYpRWMmBI0QHg=="],
 
