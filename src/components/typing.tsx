@@ -2,6 +2,7 @@
 import { useSettingsStore } from "@/store/use-settings-store";
 import { cn } from "@/utils/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
 
 const paragraphText = `this is a simple paragraph that does not have any punctuation it flows continuously without any stops or breaks making it a bit challenging to read but still understandable if you focus on the context words just keep coming together forming a long stream of thoughts without interruption which can sometimes make things interesting or even confusing depending on how you look at it`;
 const wordsArray = paragraphText.split(" ");
@@ -21,10 +22,10 @@ export default function Typing() {
   const boolCorrect = useRef<Boolean[]>([]);
   const previousWordRef = useRef("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
-
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 });
 
-  const updateCaretPosition = () => {
+  const updateCaretPosition = useCallback(() => {
     const currentWordRef = wordRefs.current[idx];
 
     if (currentWordRef) {
@@ -52,9 +53,9 @@ export default function Typing() {
         }
       }
     }
-  };
+  }, [idx, paragraph]);
 
-  const updateScrollPosition = () => {
+  const updateScrollPosition = useCallback(() => {
     if (scrollRef.current) {
       const lastWord = wordRefs.current[idx];
       if (lastWord) {
@@ -69,12 +70,12 @@ export default function Typing() {
         }
       }
     }
-  };
+  }, [idx]);
 
-  const handleChange = (value: string) => {
+  const handleChange = useCallback((value: string) => {
     if (value.startsWith(" ")) return;
-    console.log(paragraph.length);
-    if (paragraph.length == 0 && value !== "") {
+    
+    if (paragraph.length === 0 && value !== "") {
       setIsTestStarted(true);
     }
 
@@ -85,15 +86,15 @@ export default function Typing() {
     });
 
     if (value.endsWith(" ") && value.trim().length > 0) {
-      setIdx((prev) => prev + 1);
       boolCorrect.current[idx] = value.trim() === wordsArray[idx];
+      setIdx((prev) => prev + 1);
       setWord("");
     } else {
       setWord(value);
     }
-  };
+  }, [idx, paragraph.length]);
 
-  const handleBackspace = () => {
+  const handleBackspace = useCallback(() => {
     if (idx === 0) return;
 
     const isBackspaceToPrev = boolCorrect.current[idx - 1];
@@ -106,9 +107,14 @@ export default function Typing() {
         return newParagraph;
       });
     }
-  };
+  }, [idx]);
 
   const reset = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
     setWord("");
     setIdx(0);
     setParagraph([]);
@@ -116,11 +122,53 @@ export default function Typing() {
     setIsFocused(false);
     setWpm(0);
     setTimeLeft(settings.time);
-  }, []);
+    boolCorrect.current = [];
+  }, [settings.time]);
 
-  const start = useCallback(() => {
-    setIsTestStarted(true);
-  }, []);
+  // Handle timer
+  useEffect(() => {
+    if (!isTestStarted) return;
+    
+    if (timeLeft === 0) {
+      reset();
+      return;
+    }
+    
+    if (!timerRef.current) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          const newTime = prev - 1;
+          if (newTime <= 0) {
+            clearInterval(timerRef.current!);
+            timerRef.current = null;
+            return 0;
+          }
+          return newTime;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isTestStarted, timeLeft, reset]);
+
+
+  useEffect(() => {
+    if (!isTestStarted) return;
+    
+    const elapsedTime = settings.time - timeLeft;
+    if (elapsedTime <= 0) return;
+    
+    const elapsedTimeInMinutes = elapsedTime / 60;
+    const typedChars = paragraph.join("").length;
+    const wpmValue = Math.floor(typedChars / 5 / elapsedTimeInMinutes);
+    
+    setWpm(wpmValue);
+  }, [isTestStarted, timeLeft, paragraph, settings.time]);
 
   useEffect(() => {
     if (previousWordRef.current) {
@@ -130,46 +178,46 @@ export default function Typing() {
   }, [idx]);
 
   useEffect(() => {
-    updateScrollPosition();
-    updateCaretPosition();
-  }, [word, idx, paragraph]);
-
-useEffect(() => {
-  if (!isTestStarted) return;
-  if (timeLeft === 0) {
-    reset();
-    return;
-  }
-
-  const elapsedTime = settings.time - timeLeft;
-  const elapsedTimeInMinutes = elapsedTime / 60;
-
-  if (elapsedTime > 0) {
-    const charTyped = paragraph.join("").length + word.length;
-    const latestWPM = Math.floor(charTyped / 5 / elapsedTimeInMinutes);
-    setWpm(latestWPM);
-  }
-
-  const interval = setInterval(() => {
-    setTimeLeft((prev) => prev - 1);
-  }, 1000);
-
-  return () => clearInterval(interval);
-}, [timeLeft, isTestStarted]);
-
-
-  useEffect(() => {
     if (isFocused) {
       inputRef.current?.focus();
     }
   }, [isFocused]);
+
+
+  useEffect(() => {
+    let isUpdateScheduled = false;
+    
+    const updatePositions = () => {
+      if (isUpdateScheduled) return;
+      
+      isUpdateScheduled = true;
+      requestAnimationFrame(() => {
+        updateScrollPosition();
+        updateCaretPosition();
+        isUpdateScheduled = false;
+      });
+    };
+    
+    updatePositions();
+    
+
+    if (isFocused) {
+      window.addEventListener('resize', updatePositions);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updatePositions);
+    };
+  }, [word, idx, isFocused, updateScrollPosition, updateCaretPosition]);
 
   return (
     <div className="w-full h-full flex items-center justify-center">
       <div className="flex flex-col items-center justify-center w-[75%]">
         <div className="self-start flex flex-row gap-x-2 justify-between w-full ">
           <span className="font-mono text-neutral-300 text-xl">{wpm} </span>
-          <span className="font-mono text-neutral-400 text-xl self-end">{timeLeft}s</span>
+          <span className="font-mono text-neutral-400 text-xl self-end">
+            {timeLeft}s
+          </span>
         </div>
         <div
           ref={containerRef}
@@ -239,12 +287,18 @@ useEffect(() => {
             </div>
           </div>
           {isFocused && (
-            <span
+            <motion.div
+              layoutId="caret"
               className="bg-sky-300/80 h-10 w-[3px] absolute"
               style={{
                 top: caretPosition.y,
                 left: caretPosition.x,
-                transition: "left 0.05s ease-out, top 0.05s ease-out",
+              }}
+              transition={{
+                type: "spring",
+                damping: 20,
+                stiffness: 300,
+                duration: 0.1,
               }}
             />
           )}

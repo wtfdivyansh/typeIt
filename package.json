@@ -13,6 +13,8 @@
     "babel-plugin-react-compiler": "^19.0.0-beta-bafa41b-20250307",
     "clsx": "^2.1.1",
     "lucide-react": "^0.479.0",
+    "motion": "^12.5.0",
+    "motion-react": "^0.15.0-alpha.1",
     "next": "15.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
