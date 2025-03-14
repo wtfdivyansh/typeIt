@@ -9,11 +9,14 @@ export default function Typing() {
   const [word, setWord] = useState("");
   const [idx, setIdx] = useState(0);
   const [paragraph, setParagraph] = useState<string[]>([]);
+  const [isTestStarted, setIsTestStarted] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wordRefs = useRef<(HTMLDivElement | null)[]>([]);
   const boolCorrect = useRef<Boolean[]>([]);
-  const previousWordRef = useRef(""); // Store previous word when backspacing
+  const previousWordRef = useRef("");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 });
 
@@ -47,8 +50,29 @@ export default function Typing() {
     }
   };
 
+  const updateScrollPosition = () => {
+    if (scrollRef.current) {
+      const lastWord = wordRefs.current[idx];
+      if (lastWord) {
+        const wordRect = lastWord.getBoundingClientRect();
+        const scrollRect = scrollRef.current.getBoundingClientRect();
+
+        if (wordRect.bottom > scrollRect.bottom) {
+          scrollRef.current.scrollBy({
+            top: scrollRect.height - wordRect.height,
+            behavior: "instant",
+          });
+        }
+      }
+    }
+  };
+
   const handleChange = (value: string) => {
     if (value.startsWith(" ")) return;
+
+    if (paragraph.length === 0) {
+      setIsTestStarted(true);
+    }
 
     setParagraph((prev) => {
       const newParagraph = [...prev];
@@ -88,14 +112,25 @@ export default function Typing() {
   }, [idx]);
 
   useEffect(() => {
+    updateScrollPosition();
     updateCaretPosition();
   }, [word, idx, paragraph]);
+  console.log(caretPosition);
 
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <div ref={containerRef} className="w-2/3 text-neutral-300 relative">
-        <div className="w-full relative">
-          <div className="line-clamp-3 font-mono text-3xl tracking-wide">
+      <div
+        ref={containerRef}
+        className="w-[75%]  text-neutral-300 relative"
+        tabIndex={0}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+      >
+        <div
+          ref={scrollRef}
+          className="w-full max-h-[9rem] overflow-y-auto overflow-x-hidden relative"
+        >
+          <div className="font-mono text-3xl tracking-wide leading-[3rem]">
             {wordsArray.map((word, wordIndex) => {
               const typedWord = paragraph[wordIndex] || "";
               const extraChars =
@@ -106,9 +141,7 @@ export default function Typing() {
               return (
                 <div
                   key={wordIndex}
-                  className={cn("inline-block mr-6",{
-
-                  })}
+                  className="inline-block mr-6 "
                   ref={(el) => {
                     if (el) {
                       wordRefs.current[wordIndex] = el;
@@ -134,7 +167,10 @@ export default function Typing() {
                   })}
 
                   {extraChars.map((letter, extraIndex) => (
-                    <span key={extraIndex} className="text-orange-700 font-mono">
+                    <span
+                      key={extraIndex}
+                      className="text-orange-700 font-mono"
+                    >
                       {letter}
                     </span>
                   ))}
@@ -143,15 +179,16 @@ export default function Typing() {
             })}
           </div>
         </div>
-        <span
-          className="bg-sky-300/80 h-10 w-[3px] absolute"
-          style={{
-            top: caretPosition.y,
-            left: caretPosition.x,
-            transition: "left 0.05s ease-out, top 0.05s ease-out",
-          }}
-        />
-
+        {isFocused && (
+          <span
+            className="bg-sky-300/80 h-10 w-[3px] absolute"
+            style={{
+              top: caretPosition.y,
+              left: caretPosition.x,
+              transition: "left 0.05s ease-out, top 0.05s ease-out",
+            }}
+          />
+        )}
         <input
           ref={inputRef}
           className="absolute inset-0 opacity-0"
@@ -163,6 +200,11 @@ export default function Typing() {
             }
           }}
         />
+        {!isFocused && !isTestStarted && (
+          <div className="absolute inset-0 bg-transparent backdrop-blur-sm transition-opacity duration-300 flex items-center justify-center text-white text-2xl font-mono">
+            Click here to start
+          </div>
+        )}
       </div>
     </div>
   );
