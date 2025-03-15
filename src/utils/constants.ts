@@ -10,3 +10,4 @@ export const commonWords = [
   "back", "after", "use", "two", "how", "our", "work", "first", "well", "way",  
   "even", "new", "want", "because", "any", "these", "give", "day", "most", "us"
 ];
+ export const DEFAULT_CHARS = 16;

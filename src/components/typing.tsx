@@ -1,20 +1,34 @@
 "use client";
 import { useSettingsStore } from "@/store/use-settings-store";
 import { cn } from "@/utils/utils";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
+import { DEFAULT_CHARS } from "@/utils/constants";
+import Result from "./results";
 
 const paragraphText = `this is a simple paragraph that does not have any punctuation it flows continuously without any stops or breaks making it a bit challenging to read but still understandable if you focus on the context words just keep coming together forming a long stream of thoughts without interruption which can sometimes make things interesting or even confusing depending on how you look at it`;
 const wordsArray = paragraphText.split(" ");
+type ParagraphWithTimestamp = {
+  word: string;
+  timeStamp: number;
+};
+type ParaResult = {
+  correct: number;
+  incorrect: number;
+  missed: number;
+};
 
 export default function Typing() {
   const { settings } = useSettingsStore();
   const [word, setWord] = useState("");
   const [idx, setIdx] = useState(0);
-  const [paragraph, setParagraph] = useState<string[]>([]);
+  const [paragraph, setParagraph] = useState<ParagraphWithTimestamp[]>([]);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(settings.time);
   const [isFocused, setIsFocused] = useState(false);
+  const [accuracy, setAccuracy] = useState(0);
+  const [result, setResult] = useState<ParaResult | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [wpm, setWpm] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -31,7 +45,7 @@ export default function Typing() {
     if (currentWordRef) {
       const letters = currentWordRef.children;
       if (letters.length > 0) {
-        const typedWord = paragraph[idx] || "";
+        const typedWord = paragraph[idx]?.word || "";
         const lastIndex = typedWord.length > 0 ? typedWord.length - 1 : -1;
         const lastLetter =
           lastIndex >= 0
@@ -72,27 +86,33 @@ export default function Typing() {
     }
   }, [idx]);
 
-  const handleChange = useCallback((value: string) => {
-    if (value.startsWith(" ")) return;
-    
-    if (paragraph.length === 0 && value !== "") {
-      setIsTestStarted(true);
-    }
+  const handleChange = useCallback(
+    (value: string) => {
+      if (value.startsWith(" ") || value.trim().length == DEFAULT_CHARS) return;
 
-    setParagraph((prev) => {
-      const newParagraph = [...prev];
-      newParagraph[idx] = value.trim();
-      return newParagraph;
-    });
+      if (paragraph.length === 0 && value !== "") {
+        setIsTestStarted(true);
+      }
 
-    if (value.endsWith(" ") && value.trim().length > 0) {
-      boolCorrect.current[idx] = value.trim() === wordsArray[idx];
-      setIdx((prev) => prev + 1);
-      setWord("");
-    } else {
-      setWord(value);
-    }
-  }, [idx, paragraph.length]);
+      setParagraph((prev) => {
+        const newParagraph = [...prev];
+        newParagraph[idx] = {
+          word: value.trim(),
+          timeStamp: settings.time - timeLeft,
+        };
+        return newParagraph;
+      });
+
+      if (value.endsWith(" ") && value.trim().length > 0) {
+        boolCorrect.current[idx] = value.trim() === wordsArray[idx];
+        setIdx((prev) => prev + 1);
+        setWord("");
+      } else {
+        setWord(value);
+      }
+    },
+    [idx, paragraph.length]
+  );
 
   const handleBackspace = useCallback(() => {
     if (idx === 0) return;
@@ -103,7 +123,7 @@ export default function Typing() {
       setIdx((prev) => prev - 1);
       setParagraph((prev) => {
         const newParagraph = [...prev];
-        previousWordRef.current = newParagraph[idx - 1] || "";
+        previousWordRef.current = newParagraph[idx - 1].word || "";
         return newParagraph;
       });
     }
@@ -114,7 +134,7 @@ export default function Typing() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    
+
     setWord("");
     setIdx(0);
     setParagraph([]);
@@ -122,21 +142,81 @@ export default function Typing() {
     setIsFocused(false);
     setWpm(0);
     setTimeLeft(settings.time);
+    setIsCompleted(false);
     boolCorrect.current = [];
   }, [settings.time]);
 
-  // Handle timer
+  const calculateAccuracy = useCallback(() => {
+    const totalCharsTillNow = paragraph.reduce(
+      (acc, curr) => acc + curr.word.length,
+      0
+    );
+
+    const correctCharsTillNow = paragraph.reduce((acc, curr, index) => {
+      let correct = 0;
+      const originalWord = wordsArray[index] || "";
+
+      for (let i = 0; i < curr.word.length; i++) {
+        if (originalWord[i] === curr.word[i]) {
+          correct++;
+        }
+      }
+
+      return acc + correct;
+    }, 0);
+
+    if (totalCharsTillNow > 0) {
+      setAccuracy(Math.round((correctCharsTillNow / totalCharsTillNow) * 100));
+    } else {
+      setAccuracy(0);
+    }
+  }, [paragraph, idx]);
+
+  const calculateResult = useCallback(() => {
+    const { correct, incorrect, extra } = paragraph.reduce(
+      (acc, typedWord, index) => {
+        const originalWord = wordsArray[index] || "";
+
+        for (let i = 0; i < typedWord.word.length; i++) {
+          if (
+            i < originalWord.length &&
+            originalWord[i] === typedWord.word[i]
+          ) {
+            acc.correct++;
+          } else {
+            acc.incorrect++;
+          }
+        }
+        if (typedWord.word.length > originalWord.length) {
+          acc.extra += typedWord.word.length - originalWord.length;
+        }
+
+        return acc;
+      },
+      { correct: 0, incorrect: 0, extra: 0 }
+    );
+
+    setResult({
+      correct,
+      incorrect,
+      missed: extra,
+    });
+
+    setIsCompleted(true);
+  }, [paragraph]);
+
   useEffect(() => {
     if (!isTestStarted) return;
-    
+
     if (timeLeft === 0) {
-      reset();
+      calculateResult();
+
       return;
     }
-    
+
     if (!timerRef.current) {
       timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
+        setTimeLeft((prev) => {
           const newTime = prev - 1;
           if (newTime <= 0) {
             clearInterval(timerRef.current!);
@@ -147,7 +227,7 @@ export default function Typing() {
         });
       }, 1000);
     }
-    
+
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -156,17 +236,19 @@ export default function Typing() {
     };
   }, [isTestStarted, timeLeft, reset]);
 
-
   useEffect(() => {
     if (!isTestStarted) return;
-    
+
     const elapsedTime = settings.time - timeLeft;
     if (elapsedTime <= 0) return;
-    
+
     const elapsedTimeInMinutes = elapsedTime / 60;
-    const typedChars = paragraph.join("").length;
+    const typedChars = paragraph.reduce(
+      (acc, curr) => acc + curr.word.length,
+      0
+    );
     const wpmValue = Math.floor(typedChars / 5 / elapsedTimeInMinutes);
-    
+
     setWpm(wpmValue);
   }, [isTestStarted, timeLeft, paragraph, settings.time]);
 
@@ -182,14 +264,16 @@ export default function Typing() {
       inputRef.current?.focus();
     }
   }, [isFocused]);
-
+  useEffect(() => {
+    calculateAccuracy();
+  }, [word]);
 
   useEffect(() => {
     let isUpdateScheduled = false;
-    
+
     const updatePositions = () => {
       if (isUpdateScheduled) return;
-      
+
       isUpdateScheduled = true;
       requestAnimationFrame(() => {
         updateScrollPosition();
@@ -197,25 +281,41 @@ export default function Typing() {
         isUpdateScheduled = false;
       });
     };
-    
+
     updatePositions();
-    
 
     if (isFocused) {
-      window.addEventListener('resize', updatePositions);
+      window.addEventListener("resize", updatePositions);
     }
-    
+
     return () => {
-      window.removeEventListener('resize', updatePositions);
+      window.removeEventListener("resize", updatePositions);
     };
   }, [word, idx, isFocused, updateScrollPosition, updateCaretPosition]);
 
-  return (
-    <div className="w-full h-full flex items-center justify-center">
+  return !isCompleted ? (
+    <div className="w-full h-full flex items-center justify-center bg-black">
       <div className="flex flex-col items-center justify-center w-[75%]">
         <div className="self-start flex flex-row gap-x-2 justify-between w-full ">
           <span className="font-mono text-neutral-300 text-xl">{wpm} </span>
-          <span className="font-mono text-neutral-400 text-xl self-end">
+          <span
+            className={cn(
+              "font-mono text-neutral-400 text-xl self-end transition-colors duration-200",
+              {
+                "text-red-400": accuracy <= 50 && accuracy > 0,
+              }
+            )}
+          >
+            {accuracy} %
+          </span>
+          <span
+            className={cn(
+              "font-mono text-neutral-700 text-xl self-end transition-colors duration-200",
+              {
+                "text-red-600": timeLeft <= 5,
+              }
+            )}
+          >
             {timeLeft}s
           </span>
         </div>
@@ -234,54 +334,23 @@ export default function Typing() {
           >
             <div className="font-mono text-3xl tracking-wide leading-[3rem]">
               {wordsArray.map((word, wordIndex) => {
-                const typedWord = paragraph[wordIndex] || "";
-                const extraChars =
-                  typedWord.length > word.length
-                    ? typedWord.slice(word.length).split("")
-                    : [];
+                const typedWord = paragraph[wordIndex]?.word || "";
+                const isUnderlined =
+                  typedWord.length > word.length ||
+                  (!boolCorrect.current[wordIndex] && idx > wordIndex);
 
                 return (
-                  <div
+                  <Word
                     key={wordIndex}
-                    className={cn("inline-block mr-6 ", {
-                      "underline underline-offset-4":
-                        extraChars.length > 0 ||
-                        (!boolCorrect.current[wordIndex] && idx > wordIndex),
-                    })}
-                    ref={(el) => {
+                    word={word}
+                    typedWord={typedWord}
+                    isUnderlined={isUnderlined}
+                    wordRef={(el) => {
                       if (el) {
                         wordRefs.current[wordIndex] = el;
                       }
                     }}
-                  >
-                    {word.split("").map((letter, letterIndex) => {
-                      const actualLetter = word[letterIndex];
-                      const typedLetter = typedWord[letterIndex] || " ";
-
-                      return (
-                        <span
-                          key={letterIndex}
-                          className={cn("text-neutral-600 font-mono", {
-                            "text-neutral-100": actualLetter === typedLetter,
-                            "text-red-400":
-                              actualLetter !== typedLetter &&
-                              typedLetter !== " ",
-                          })}
-                        >
-                          {letter}
-                        </span>
-                      );
-                    })}
-
-                    {extraChars.map((letter, extraIndex) => (
-                      <span
-                        key={extraIndex}
-                        className="text-orange-700 font-mono"
-                      >
-                        {letter}
-                      </span>
-                    ))}
-                  </div>
+                  />
                 );
               })}
             </div>
@@ -295,7 +364,7 @@ export default function Typing() {
                 left: caretPosition.x,
               }}
               transition={{
-                type: "spring",
+                type: "tween",
                 damping: 20,
                 stiffness: 300,
                 duration: 0.1,
@@ -322,5 +391,65 @@ export default function Typing() {
         </div>
       </div>
     </div>
+  ) : (
+    <Result
+      result={result!}
+      accuracy={accuracy}
+      wpm={wpm}
+      wordsWithTimestamp={paragraph}
+      reset={reset}
+    />
   );
 }
+
+const Word = memo(
+  ({
+    word,
+    typedWord,
+    isUnderlined,
+    wordRef,
+  }: {
+    word: string;
+    typedWord: string;
+    isUnderlined: boolean;
+    wordRef: (el: HTMLDivElement | null) => void;
+  }) => {
+    const extraChars =
+      typedWord.length > word.length
+        ? typedWord.slice(word.length).split("")
+        : [];
+
+    return (
+      <div
+        className={cn("inline-block mr-6 ", {
+          "underline underline-offset-4": isUnderlined,
+        })}
+        ref={wordRef}
+      >
+        {word.split("").map((letter, letterIndex) => {
+          const actualLetter = word[letterIndex];
+          const typedLetter = typedWord[letterIndex] || " ";
+
+          return (
+            <span
+              key={letterIndex}
+              className={cn("text-neutral-600 font-mono", {
+                "text-neutral-100": actualLetter === typedLetter,
+                "text-red-400":
+                  actualLetter !== typedLetter && typedLetter !== " ",
+              })}
+            >
+              {letter}
+            </span>
+          );
+        })}
+
+        {extraChars.map((letter, extraIndex) => (
+          <span key={extraIndex} className="text-orange-700 font-mono">
+            {letter}
+          </span>
+        ))}
+      </div>
+    );
+  }
+);
