@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RotateCcw, Trophy, Clock, BarChart2, Zap, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useSettingsStore } from "@/store/use-settings-store";
 
 
 interface ResultProps {
@@ -51,6 +52,7 @@ export default function Result({
   actualWords,
   reset,
 }: ResultProps) {
+  const {settings} = useSettingsStore();
   const [activeTab, setActiveTab] = useState("performance");
   const [animatedWpm, setAnimatedWpm] = useState(0);
   const [animatedAcc, setAnimatedAcc] = useState(0);
@@ -67,7 +69,7 @@ export default function Result({
 
     const averagedData = Object.entries(groupedData).map(
       ([timeStamp, { sumWpm, count }]) => ({
-        time: Number(timeStamp),
+        time: Number(timeStamp)+1,
         wpm: sumWpm / count,
       })
     );
@@ -104,7 +106,7 @@ export default function Result({
           className="flex items-center gap-3"
         >
           <Badge variant="outline" className="border-zinc-700 text-zinc-400">
-            <Clock className="w-3 h-3 mr-1" /> 15s
+            <Clock className="w-3 h-3 mr-1" /> {settings.time}s
           </Badge>
           <Button
             variant="ghost"
@@ -138,7 +140,7 @@ export default function Result({
               </div>
               <div className="text-7xl font-light tracking-tighter mb-2 text-emerald-400/30">
                 {animatedWpm}
-                <span className="text-emerald-400 text-xl ml-1">wpm</span>
+                <span className="text-emerald-400 text-xl tracking-wide ml-1">wpm</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-zinc-500">
                 <Zap className="w-3 h-3 text-emerald-400" />
@@ -301,31 +303,42 @@ export default function Result({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-1">
                     <div className="text-zinc-400 text-xs uppercase tracking-wider">
-                      Raw WPM
+                      WPM
                     </div>
-                    <div className="text-2xl font-light">102</div>
+                    <div className="text-2xl font-light text-gray-100/30">
+                      {animatedWpm}
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-zinc-400 text-xs uppercase tracking-wider">
                       Characters
                     </div>
-                    <div className="text-2xl font-light">124/1/0/0</div>
+                    <div className="text-2xl font-light  text-gray-100/30">
+                      {" "}
+                      <span className="text-emerald-400/40">{result.correct}</span> /{" "}
+                      <span className="text-red-400/40">{result.incorrect}</span> /{" "}
+                      <span className="text-yellow-400/40">{result.missed}</span> {" "}
+                    </div>
                     <div className="text-xs text-zinc-500">
-                      correct/incorrect/missed/extra
+                      correct/incorrect/extra
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-zinc-400 text-xs uppercase tracking-wider">
-                      Consistency
+                    <div className="text-zinc-400 text-xs uppercase tracking-wider ">
+                      Accuracy
                     </div>
-                    <div className="text-2xl font-light">82%</div>
+                    <div className="text-2xl font-light  text-gray-100/30">
+                      {animatedAcc}%
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-zinc-400 text-xs uppercase tracking-wider">
                       Time
                     </div>
-                    <div className="text-2xl font-light">15s</div>
-                    <div className="text-xs text-zinc-500">
+                    <div className="text-2xl font-light  text-gray-100/30">
+                      {settings.time}s
+                    </div>
+                    <div className="text-xs  text-gray-100/30">
                       00:00:15 session
                     </div>
                   </div>
@@ -363,7 +376,7 @@ export default function Result({
                         className={cn(
                           "relative group cursor-pointer px-1 py-0.5 rounded transition-colors",
                           {
-                            "bg-zinc-800/30 hover:bg-zinc-800/60": !isCorrect,
+                            "bg-neutral-800/70 hover:bg-zinc-800/70 underline underline-offset-4": !isCorrect,
                           }
                         )}
                         key={index}
