@@ -43,6 +43,7 @@ export default function Typing() {
   const wordRefs = useRef<(HTMLDivElement | null)[]>([]);
   const boolCorrect = useRef<Boolean[]>([]);
   const previousWordRef = useRef("");
+  const gameStartTime = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 });
@@ -94,7 +95,6 @@ export default function Typing() {
     }
   }, [idx]);
 
-
   const handleChange = useCallback(
     (value: string) => {
       if (value.startsWith(" ") || value.trim().length == DEFAULT_CHARS) return;
@@ -115,7 +115,8 @@ export default function Typing() {
       });
 
       if (value.endsWith(" ") && value.trim().length > 0) {
-        const startTimeOfPrevWord = paragraph[idx - 1]?.timeStamp ?? Date.now();
+        const startTimeOfPrevWord =
+          idx === 0 ? gameStartTime.current! : paragraph[idx - 1].timeStamp;
 
         const elapsedTime = (Date.now() - startTimeOfPrevWord) / 1000 / 60;
 
@@ -133,20 +134,18 @@ export default function Typing() {
           };
           return newParagraph;
         });
-        //TODO - calculate the correct char and then calculate wpm
-        chartDataRef.current.push({
-          time: timeLeft,
-          wpm,
-        });
+
         setIdx((prev) => prev + 1);
         setWord("");
       } else {
+        if (idx === 0 && gameStartTime.current === null) {
+          gameStartTime.current = Date.now();
+        }
         setWord(value);
       }
     },
     [idx, paragraph.length, startTime]
   );
-
 
   const handleBackspace = useCallback(() => {
     if (idx === 0) return;
@@ -278,11 +277,22 @@ export default function Typing() {
     if (elapsedTime <= 0) return;
 
     const elapsedTimeInMinutes = elapsedTime / 60;
-    const typedChars = paragraph.reduce(
-      (acc, curr) => acc + curr.word.length,
-      0
-    );
-    const wpmValue = Math.floor(typedChars / 5 / elapsedTimeInMinutes);
+
+    const correctChars = paragraph.reduce((acc, curr, index) => {
+      const originalWord = wordsArray[index] || "";
+      return (
+        acc +
+        curr.word.split("").reduce((charAcc, char, i) => {
+          return charAcc + (originalWord[i] === char ? 1 : 0);
+        }, 0)
+      );
+    }, 0);
+
+    const wpmValue = Math.floor(correctChars / 5 / elapsedTimeInMinutes);
+    chartDataRef.current.push({
+      time: timeLeft,
+      wpm: wpmValue,
+    });
 
     setWpm(wpmValue);
   }, [isTestStarted, timeLeft, paragraph, settings.time]);
@@ -327,7 +337,6 @@ export default function Typing() {
       window.removeEventListener("resize", updatePositions);
     };
   }, [word, idx, isFocused, updateScrollPosition, updateCaretPosition]);
-
 
   return !isCompleted ? (
     <div className="w-full h-full flex items-center justify-center bg-black">
@@ -435,7 +444,6 @@ export default function Typing() {
       wordsReview={paragraph}
       actualWords={wordsArray}
       wordsWithTimestamp={chartDataRef.current}
-      BoolCorrect={boolCorrect.current}
       reset={reset}
     />
   );

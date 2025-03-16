@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RotateCcw, Trophy, Clock, BarChart2, Zap, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
 
 interface ResultProps {
   result: {
@@ -31,7 +33,6 @@ interface ResultProps {
   }[];
   wordsReview: {
     word: string;
-    timeStamp: number;
     wpm: number;
   }[];
   actualWords: string[];
@@ -137,7 +138,7 @@ export default function Result({
               </div>
               <div className="text-7xl font-light tracking-tighter mb-2 text-emerald-400/30">
                 {animatedWpm}
-                <span className="text-emerald-400 text-xl tracking-wide">wpm</span>
+                <span className="text-emerald-400 text-xl ml-1">wpm</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-zinc-500">
                 <Zap className="w-3 h-3 text-emerald-400" />
@@ -263,9 +264,7 @@ export default function Result({
                               <div className="bg-zinc-800 border border-zinc-700 rounded-md p-2 shadow-lg">
                                 <p className="text-emerald-400 font-medium">{`${Math.round(
                                   payload[0]?.value
-                                    ? payload[0]?.value
-                                      ? Math.round(Number(payload[0].value))
-                                      : 0
+                                    ? Math.round(Number(payload[0].value))
                                     : 0
                                 )} WPM`}</p>
                                 <p className="text-zinc-400 text-xs">{`Time: ${payload[0].payload.time}s`}</p>
@@ -353,11 +352,84 @@ export default function Result({
           <TabsContent value="review" className="mt-6">
             <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm">
               <CardContent className="p-6">
-                <div className="text-center text-zinc-400 py-8 flex flex-row ">
-                  {wordsReview.map((word, index) => (
-                    <p key={index}>{word.word}</p>
-                  ))}
-                   
+                <div className="text-zinc-400 py-4 flex flex-wrap gap-2">
+                  {wordsReview.map((word, index) => {
+                    const typedWord = word.word || "";
+                    const actualWord = actualWords[index] || "";
+                    const isCorrect = typedWord === actualWord;
+
+                    return (
+                      <div
+                        className={cn(
+                          "relative group cursor-pointer px-1 py-0.5 rounded transition-colors",
+                          {
+                            "bg-zinc-800/30 hover:bg-zinc-800/60": !isCorrect,
+                          }
+                        )}
+                        key={index}
+                      >
+                        <div className="flex">
+                          {typedWord.split("").map((letter, letterIndex) => {
+                            const actualLetter = actualWord[letterIndex];
+
+                            return (
+                              <span
+                                key={letterIndex}
+                                className={cn("font-mono", {
+                                  "text-neutral-100": letter === actualLetter,
+                                  "text-red-400": letter !== actualLetter,
+                                })}
+                              >
+                                {letter}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <div className="absolute left-1/2 bottom-full -translate-x-1/2 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                          <div className="bg-zinc-800 border border-zinc-700 rounded-md p-3 shadow-lg min-w-[180px]">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs text-zinc-400">WPM</span>
+                              <span className="text-emerald-400 font-medium">
+                                {Math.round(word.wpm)}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div>
+                                <div className="text-xs text-zinc-400 mb-1">
+                                  Expected
+                                </div>
+                                <div className="text-sm font-medium text-zinc-200 bg-zinc-900/60 px-2 py-1 rounded">
+                                  {actualWord}
+                                </div>
+                              </div>
+
+                              <div>
+                                <div className="text-xs text-zinc-400 mb-1">
+                                  You typed
+                                </div>
+                                <div
+                                  className={cn(
+                                    "text-sm font-medium px-2 py-1 rounded",
+                                    {
+                                      "text-zinc-200 bg-zinc-900/60": isCorrect,
+                                      "text-red-400 bg-red-950/20": !isCorrect,
+                                    }
+                                  )}
+                                >
+                                  {typedWord}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="absolute left-1/2 top-full -translate-x-1/2 -mt-[1px]">
+                              <div className="border-8 border-transparent border-t-zinc-700"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
