@@ -11,11 +11,17 @@ const wordsArray = paragraphText.split(" ");
 type ParagraphWithTimestamp = {
   word: string;
   timeStamp: number;
+  wpm: number;
 };
 type ParaResult = {
   correct: number;
   incorrect: number;
   missed: number;
+};
+
+type ChartData = {
+  time: number;
+  wpm: number;
 };
 
 export default function Typing() {
@@ -25,11 +31,13 @@ export default function Typing() {
   const [paragraph, setParagraph] = useState<ParagraphWithTimestamp[]>([]);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(settings.time);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [accuracy, setAccuracy] = useState(0);
   const [result, setResult] = useState<ParaResult | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [wpm, setWpm] = useState(0);
+  const chartDataRef = useRef<ChartData[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wordRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -86,11 +94,13 @@ export default function Typing() {
     }
   }, [idx]);
 
+
   const handleChange = useCallback(
     (value: string) => {
       if (value.startsWith(" ") || value.trim().length == DEFAULT_CHARS) return;
 
-      if (paragraph.length === 0 && value !== "") {
+      if (!startTime) {
+        setStartTime(Date.now());
         setIsTestStarted(true);
       }
 
@@ -98,21 +108,45 @@ export default function Typing() {
         const newParagraph = [...prev];
         newParagraph[idx] = {
           word: value.trim(),
-          timeStamp: settings.time - timeLeft,
+          timeStamp: Date.now(),
+          wpm: paragraph[idx]?.wpm || 0,
         };
         return newParagraph;
       });
 
       if (value.endsWith(" ") && value.trim().length > 0) {
+        const startTimeOfPrevWord = paragraph[idx - 1]?.timeStamp ?? Date.now();
+
+        const elapsedTime = (Date.now() - startTimeOfPrevWord) / 1000 / 60;
+
+        const wordWPM =
+          elapsedTime > 0
+            ? Math.floor(wordsArray[idx].length / 5 / elapsedTime)
+            : 0;
+
         boolCorrect.current[idx] = value.trim() === wordsArray[idx];
+        setParagraph((prev) => {
+          const newParagraph = [...prev];
+          newParagraph[idx] = {
+            ...newParagraph[idx],
+            wpm: wordWPM,
+          };
+          return newParagraph;
+        });
+        //TODO - calculate the correct char and then calculate wpm
+        chartDataRef.current.push({
+          time: timeLeft,
+          wpm,
+        });
         setIdx((prev) => prev + 1);
         setWord("");
       } else {
         setWord(value);
       }
     },
-    [idx, paragraph.length]
+    [idx, paragraph.length, startTime]
   );
+
 
   const handleBackspace = useCallback(() => {
     if (idx === 0) return;
@@ -141,6 +175,7 @@ export default function Typing() {
     setIsTestStarted(false);
     setIsFocused(false);
     setWpm(0);
+    setStartTime(null);
     setTimeLeft(settings.time);
     setIsCompleted(false);
     boolCorrect.current = [];
@@ -293,6 +328,7 @@ export default function Typing() {
     };
   }, [word, idx, isFocused, updateScrollPosition, updateCaretPosition]);
 
+
   return !isCompleted ? (
     <div className="w-full h-full flex items-center justify-center bg-black">
       <div className="flex flex-col items-center justify-center w-[75%]">
@@ -396,13 +432,16 @@ export default function Typing() {
       result={result!}
       accuracy={accuracy}
       wpm={wpm}
-      wordsWithTimestamp={paragraph}
+      wordsReview={paragraph}
+      actualWords={wordsArray}
+      wordsWithTimestamp={chartDataRef.current}
+      BoolCorrect={boolCorrect.current}
       reset={reset}
     />
   );
 }
 
-const Word = memo(
+export const Word = memo(
   ({
     word,
     typedWord,

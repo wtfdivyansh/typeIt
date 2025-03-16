@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   XAxis,
   YAxis,
@@ -8,40 +8,14 @@ import {
   ResponsiveContainer,
   Area,
   AreaChart,
+  Tooltip,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  RotateCcw,
-  Trophy,
-  Keyboard,
-  Clock,
-  BarChart2,
-  Zap,
-  Share2,
-} from "lucide-react";
+import { RotateCcw, Trophy, Clock, BarChart2, Zap, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
-
-// Sample performance data
-const performanceData = [
-  { time: 1, wpm: 70, accuracy: 92 },
-  { time: 2, wpm: 85, accuracy: 94 },
-  { time: 3, wpm: 90, accuracy: 95 },
-  { time: 4, wpm: 88, accuracy: 96 },
-  { time: 5, wpm: 92, accuracy: 97 },
-  { time: 6, wpm: 89, accuracy: 98 },
-  { time: 7, wpm: 85, accuracy: 97 },
-  { time: 8, wpm: 82, accuracy: 96 },
-  { time: 9, wpm: 88, accuracy: 97 },
-  { time: 10, wpm: 90, accuracy: 98 },
-  { time: 11, wpm: 89, accuracy: 98 },
-  { time: 12, wpm: 91, accuracy: 99 },
-  { time: 13, wpm: 88, accuracy: 98 },
-  { time: 14, wpm: 90, accuracy: 97 },
-  { time: 15, wpm: 99, accuracy: 98 },
-];
 
 interface ResultProps {
   result: {
@@ -52,22 +26,53 @@ interface ResultProps {
   accuracy: number;
   wpm: number;
   wordsWithTimestamp: {
+    time: number;
+    wpm: number;
+  }[];
+  wordsReview: {
     word: string;
     timeStamp: number;
+    wpm: number;
   }[];
+  actualWords: string[];
   reset: () => void;
 }
-
+type ChartData = {
+  time: number;
+  wpm: number;
+};
 export default function Result({
-    result,
-    accuracy,
-    wpm,
-    wordsWithTimestamp,
-    reset
-  }: ResultProps) {
+  result,
+  accuracy,
+  wpm,
+  wordsWithTimestamp,
+  wordsReview,
+  actualWords,
+  reset,
+}: ResultProps) {
   const [activeTab, setActiveTab] = useState("performance");
   const [animatedWpm, setAnimatedWpm] = useState(0);
   const [animatedAcc, setAnimatedAcc] = useState(0);
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const updateChartData = useCallback(() => {
+    const groupedData = wordsWithTimestamp.reduce((acc, { time, wpm }) => {
+      if (!acc[time]) {
+        acc[time] = { sumWpm: 0, count: 0 };
+      }
+      acc[time].sumWpm += wpm;
+      acc[time].count += 1;
+      return acc;
+    }, {} as Record<number, { sumWpm: number; count: number }>);
+
+    const averagedData = Object.entries(groupedData).map(
+      ([timeStamp, { sumWpm, count }]) => ({
+        time: Number(timeStamp),
+        wpm: sumWpm / count,
+      })
+    );
+
+    setChartData(averagedData);
+  }, [wordsWithTimestamp]);
 
   useEffect(() => {
     const wpmTimer = setTimeout(() => {
@@ -78,30 +83,19 @@ export default function Result({
       setAnimatedAcc(accuracy);
     }, 800);
 
+    const chartTimer = setTimeout(() => {
+      updateChartData();
+    }, 500);
     return () => {
       clearTimeout(wpmTimer);
       clearTimeout(accTimer);
+      clearTimeout(chartTimer);
     };
   }, []);
-
+  console.log(chartData);
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white font-mono p-4 md:p-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        {/* <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-2"
-        >
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-2 rounded-lg">
-            <Keyboard className="w-5 h-5 text-black" />
-          </div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-300">
-            typemaster
-          </h1>
-        </motion.div> */}
-
+    <div className="h-full  bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white font-mono p-8 md:p-8">
+      <div className="flex justify-end items-center py-6">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -141,9 +135,9 @@ export default function Result({
               <div className="text-zinc-400 uppercase text-xs tracking-wider mb-1">
                 Words Per Minute
               </div>
-              <div className="text-7xl font-light tracking-tighter mb-2">
+              <div className="text-7xl font-light tracking-tighter mb-2 text-emerald-400/30">
                 {animatedWpm}
-                <span className="text-emerald-400 text-xl ml-1">wpm</span>
+                <span className="text-emerald-400 text-xl tracking-wide">wpm</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-zinc-500">
                 <Zap className="w-3 h-3 text-emerald-400" />
@@ -164,13 +158,16 @@ export default function Result({
               <div className="text-zinc-400 uppercase text-xs tracking-wider mb-1">
                 Accuracy
               </div>
-              <div className="text-7xl font-light tracking-tighter mb-2">
+              <div className="text-7xl font-light tracking-tighter mb-2 text-blue-400/30">
                 {animatedAcc}
                 <span className="text-blue-400 text-xl ml-1">%</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-zinc-500">
                 <BarChart2 className="w-3 h-3 text-blue-400" />
-                <span>{result.correct} correct / {result.incorrect} error / {result.missed} extra</span>
+                <span>
+                  {result.correct} correct / {result.incorrect} error /{" "}
+                  {result.missed} extra
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -189,7 +186,7 @@ export default function Result({
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-3 bg-zinc-900/50 border border-zinc-800 rounded-xl p-1">
+          <TabsList className="grid grid-cols-4 bg-zinc-900/50 border border-zinc-800 rounded-xl p-1">
             <TabsTrigger
               value="performance"
               className="rounded-lg data-[state=active]:bg-zinc-800"
@@ -208,6 +205,12 @@ export default function Result({
             >
               History
             </TabsTrigger>
+            <TabsTrigger
+              value="review"
+              className="rounded-lg data-[state=active]:bg-zinc-800"
+            >
+              Review
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="performance" className="mt-6">
@@ -215,7 +218,10 @@ export default function Result({
               <CardContent className="p-6">
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={wordsWithTimestamp}>
+                    <AreaChart
+                      data={chartData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
                       <defs>
                         <linearGradient
                           id="wpmGradient"
@@ -235,24 +241,6 @@ export default function Result({
                             stopOpacity={0}
                           />
                         </linearGradient>
-                        <linearGradient
-                          id="accuracyGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#3b82f6"
-                            stopOpacity={0.3}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#3b82f6"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
                       </defs>
                       <CartesianGrid stroke="#333333" opacity={0.1} />
                       <XAxis
@@ -267,6 +255,26 @@ export default function Result({
                         axisLine={false}
                         domain={[0, 120]}
                       />
+                      <Tooltip
+                        cursor={false}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-zinc-800 border border-zinc-700 rounded-md p-2 shadow-lg">
+                                <p className="text-emerald-400 font-medium">{`${Math.round(
+                                  payload[0]?.value
+                                    ? payload[0]?.value
+                                      ? Math.round(Number(payload[0].value))
+                                      : 0
+                                    : 0
+                                )} WPM`}</p>
+                                <p className="text-zinc-400 text-xs">{`Time: ${payload[0].payload.time}s`}</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
                       <Area
                         type="monotone"
                         dataKey="wpm"
@@ -274,15 +282,13 @@ export default function Result({
                         strokeWidth={2}
                         fillOpacity={1}
                         fill="url(#wpmGradient)"
+                        activeDot={{
+                          r: 6,
+                          stroke: "#10b981",
+                          strokeWidth: 2,
+                          fill: "#0f172a",
+                        }}
                       />
-                      {/* <Area
-                        type="monotone"
-                        dataKey="accuracy"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#accuracyGradient)"
-                      /> */}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -344,6 +350,18 @@ export default function Result({
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="review" className="mt-6">
+            <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <div className="text-center text-zinc-400 py-8 flex flex-row ">
+                  {wordsReview.map((word, index) => (
+                    <p key={index}>{word.word}</p>
+                  ))}
+                   
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </motion.div>
 
@@ -354,25 +372,18 @@ export default function Result({
         transition={{ duration: 0.6, delay: 0.3 }}
         className="flex justify-center gap-4 mt-8"
       >
-        <Button className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-black font-medium rounded-xl px-6" onClick={reset}>
+        <Button
+          className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-black font-medium rounded-xl px-6"
+          onClick={reset}
+        >
           New Test
         </Button>
         <Button
           variant="outline"
-          className="border-zinc-700 hover:bg-zinc-800 rounded-xl px-6"
+          className="border-zinc-700 hover:bg-zinc-800 rounded-xl px-6 text-gray-900"
         >
           <RotateCcw className="w-4 h-4 mr-2" /> Retry
         </Button>
-      </motion.div>
-
-      {/* Footer */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-        className="mt-12 text-center text-xs text-zinc-500"
-      >
-        <p>Designed with ♥ for modern typists</p>
       </motion.div>
     </div>
   );
