@@ -7,7 +7,11 @@ import { DEFAULT_CHARS } from "@/utils/constants";
 import Result from "./results";
 
 const paragraphText = `this is a simple paragraph that does not have any punctuation it flows continuously without any stops or breaks making it a bit challenging to read but still understandable if you focus on the context words just keep coming together forming a long stream of thoughts without interruption which can sometimes make things interesting or even confusing depending on how you look at it`;
+
+
 const wordsArray = paragraphText.split(" ");
+
+
 type ParagraphWithTimestamp = {
   word: string;
   timeStamp: number;
