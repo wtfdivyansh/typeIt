@@ -1,3 +1,4 @@
+import { uuid } from "drizzle-orm/pg-core"
 import {
   pgTable,
   text,
@@ -55,3 +56,19 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+
+export const testResults = pgTable("test_results", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  originalWords: text("original_words").array().notNull(),
+  typedWords: text("typed_words").array().notNull(),
+  mode: text("mode").notNull(),
+  accuracy: integer("accuracy").notNull(),
+  wpm: integer("wpm").notNull(),
+  rawWpm: integer("raw_wpm").notNull(),
+  date: timestamp("date", { withTimezone: true }).defaultNow().notNull(),
+  userId : text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+
