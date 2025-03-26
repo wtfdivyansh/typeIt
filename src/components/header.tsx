@@ -1,4 +1,14 @@
-import { Bell, Bot, Crown, Keyboard, KeyboardIcon, Settings, User, Users } from "lucide-react"
+import {
+  Bell,
+  Bot,
+  Crown,
+  Keyboard,
+  KeyboardIcon,
+  Settings,
+  User,
+  Users,
+} from "lucide-react";
+import { UserProfile } from "./user-icon";
 
 export default function Header() {
   return (
@@ -18,7 +28,7 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-4">
-        <User className="w-5 h-5 hover:text-neutral-300 cursor-pointer text-neutral-500 hover:scale-110 transition-transform duration-200" />
+        <UserProfile />
       </div>
     </div>
   );

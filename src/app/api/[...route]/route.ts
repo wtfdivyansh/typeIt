@@ -6,12 +6,16 @@ export const dynamic = "force-dynamic";
 const app = new Hono().basePath("/api");
 
 app.get("/hello", (c) => {
+
   return c.json({
     message: "Hello from Hono on Vercel! by typeit 👋",
   });
 });
 
 
-app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw));
 
 export const GET = handle(app);
+export const POST = handle(app);
+export const DELETE = handle(app);
+export  const PUT = handle(app);
