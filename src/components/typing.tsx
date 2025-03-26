@@ -1,15 +1,16 @@
 "use client";
 import { useSettingsStore } from "@/store/use-settings-store";
 import { cn } from "@/utils/utils";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { DEFAULT_CHARS } from "@/utils/constants";
 import Result from "./results";
+import { generateWords } from "@/lib/words-generator";
 
-const paragraphText = `this is a simple paragraph that does not have any punctuation it flows continuously without any stops or breaks making it a bit challenging to read but still understandable if you focus on the context words just keep coming together forming a long stream of thoughts without interruption which can sometimes make things interesting or even confusing depending on how you look at it`;
+// const paragraphText = `this is a simple paragraph that does not have any punctuation it flows continuously without any stops or breaks making it a bit challenging to read but still understandable if you focus on the context words just keep coming together forming a long stream of thoughts without interruption which can sometimes make things interesting or even confusing depending on how you look at it`;
 
 
-const wordsArray = paragraphText.split(" ");
+// const wordsArray = paragraphText.split(" ");
 
 
 type ParagraphWithTimestamp = {
@@ -30,6 +31,7 @@ type ChartData = {
 
 export default function Typing() {
   const { settings } = useSettingsStore();
+  const [text,setText] = useState(generateWords());
   const [word, setWord] = useState("");
   const [idx, setIdx] = useState(0);
   const [paragraph, setParagraph] = useState<ParagraphWithTimestamp[]>([]);
@@ -51,6 +53,8 @@ export default function Typing() {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 });
+
+  const wordsArray = useMemo(()=>text.split(" "),[text])
 
   const updateCaretPosition = useCallback(() => {
     const currentWordRef = wordRefs.current[idx];
@@ -181,6 +185,7 @@ export default function Typing() {
     setStartTime(null);
     setTimeLeft(settings.time);
     setIsCompleted(false);
+    setText(generateWords());
     boolCorrect.current = [];
   }, [settings.time]);
 
@@ -342,6 +347,19 @@ export default function Typing() {
     };
   }, [word, idx, isFocused, updateScrollPosition, updateCaretPosition]);
 
+  useEffect(()=>{
+   const handleTab = (e:KeyboardEvent)=>{
+     if(e.key==="Tab"){
+       e.preventDefault();
+       reset()
+     }
+   }
+   window.addEventListener("keydown",handleTab)
+   return ()=>{
+     window.removeEventListener("keydown",handleTab)
+   }
+  },[])
+
   return !isCompleted ? (
     <div className="w-full h-full flex items-center justify-center bg-black">
       <div className="flex flex-col items-center justify-center w-[75%]">
@@ -438,7 +456,7 @@ export default function Typing() {
             </div>
           )}
         </div>
-      </div>
+      </div>    
     </div>
   ) : (
     <Result

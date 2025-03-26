@@ -97,7 +97,13 @@ const CommonWords = {
     "refreshingly",
   ],
 };
-
+const shuffleArray = (arr: string[]) => {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
 export const generateWords = (count: number = 60) => {
   const words: string[] = [];
   let ttlBig = 4;
@@ -112,7 +118,7 @@ export const generateWords = (count: number = 60) => {
       categories[Math.floor(Math.random() * categories.length)];
     if (ttlBig > 0 && randomCategory === "bigWords") {
       randomCategory = categories[Math.floor(Math.random() * 2)];
-      console.log(randomCategory)
+      console.log(randomCategory);
       ttlBig--;
     }
 
@@ -121,8 +127,7 @@ export const generateWords = (count: number = 60) => {
 
     words.push(currentCategory[randomIndex]);
   }
-   console.log(words.join(" "));
-   return words.join(" ");
+  return shuffleArray(words).join(" ");
 };
 
 generateWords();
