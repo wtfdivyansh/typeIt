@@ -3,6 +3,7 @@ import { CreateRoomSchema } from "@/components/multiplayer/create-room";
 import { room } from "@/db/schema";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/get-session";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const createRoom = async (data: z.infer<typeof CreateRoomSchema>) => {
@@ -25,3 +26,18 @@ export const createRoom = async (data: z.infer<typeof CreateRoomSchema>) => {
     return {code: createdRoom[0].code}
 }
 
+export const joinRoom = async (code: string) => {
+    const user = await getSession();
+
+    if (!user) {
+        throw new Error("Unauthorized");
+    }
+    const [roomToJoin] = await db.selectDistinct().from(room).where(eq(room.code, code))
+
+    if (!roomToJoin) {
+        throw new Error("Room not found");
+    }
+
+    return {message: "Room joined", code: roomToJoin.code}
+
+}
