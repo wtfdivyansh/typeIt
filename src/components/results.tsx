@@ -131,7 +131,6 @@ export default function Result({
         </motion.div>
       </div>
 
-      {/* Main Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -190,7 +189,6 @@ export default function Result({
         </motion.div>
       </div>
 
-      {/* Tabs */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

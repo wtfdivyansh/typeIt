@@ -72,3 +72,15 @@ export const testResults = pgTable("test_results", {
     .references(() => user.id, { onDelete: "cascade" }),
 });
 
+export const room = pgTable("room", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  mode: text("mode").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+
