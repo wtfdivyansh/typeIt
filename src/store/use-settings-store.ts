@@ -24,7 +24,9 @@ const initialSettings: Settings["settings"] = {
   punctuation: false,
   mode: "time",
 };
-
+if(!localStorage.getItem("settings")) {
+  localStorage.setItem("settings", JSON.stringify(initialSettings));
+}
 export const useSettingsStore = create<Settings>()(
   persist(
     (set) => ({
