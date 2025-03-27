@@ -129,5 +129,3 @@ export const generateWords = (count: number = 60) => {
   }
   return shuffleArray(words).join(" ");
 };
-
-generateWords();

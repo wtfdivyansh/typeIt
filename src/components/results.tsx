@@ -19,7 +19,6 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/store/use-settings-store";
 
-
 interface ResultProps {
   result: {
     correct: number;
@@ -52,7 +51,7 @@ export default function Result({
   actualWords,
   reset,
 }: ResultProps) {
-  const {settings} = useSettingsStore();
+  const { settings } = useSettingsStore();
   const [activeTab, setActiveTab] = useState("performance");
   const [animatedWpm, setAnimatedWpm] = useState(0);
   const [animatedAcc, setAnimatedAcc] = useState(0);
@@ -69,7 +68,7 @@ export default function Result({
 
     const averagedData = Object.entries(groupedData).map(
       ([timeStamp, { sumWpm, count }]) => ({
-        time: Number(timeStamp)+1,
+        time: Number(timeStamp) + 1,
         wpm: sumWpm / count,
       })
     );
@@ -97,12 +96,19 @@ export default function Result({
   }, []);
   console.log(chartData);
   return (
-    <div className="h-full  bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white font-mono p-8 md:p-8">
+    <motion.div
+      initial={{ opacity: 0.5}}
+      animate={{ opacity: 1}}
+      transition={{ duration: 0.1,
+         ease:"circIn"
+       }}
+      className="h-full bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white font-mono p-8 md:p-8"
+    >
       <div className="flex justify-end items-center py-6">
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0}}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
           className="flex items-center gap-3"
         >
           <Badge variant="outline" className="border-zinc-700 text-zinc-400">
@@ -138,10 +144,17 @@ export default function Result({
               <div className="text-zinc-400 uppercase text-xs tracking-wider mb-1">
                 Words Per Minute
               </div>
-              <div className="text-7xl font-light tracking-tighter mb-2 text-emerald-400/30">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="text-7xl font-light tracking-tighter mb-2 text-emerald-400/30"
+              >
                 {animatedWpm}
-                <span className="text-emerald-400 text-xl tracking-wide ml-1">wpm</span>
-              </div>
+                <span className="text-emerald-400 text-xl tracking-wide ml-1">
+                  wpm
+                </span>
+              </motion.div>
               <div className="flex items-center gap-2 text-xs text-zinc-500">
                 <Zap className="w-3 h-3 text-emerald-400" />
                 <span>Top 15% of all typists</span>
@@ -315,9 +328,17 @@ export default function Result({
                     </div>
                     <div className="text-2xl font-light  text-gray-100/30">
                       {" "}
-                      <span className="text-emerald-400/40">{result.correct}</span> /{" "}
-                      <span className="text-red-400/40">{result.incorrect}</span> /{" "}
-                      <span className="text-yellow-400/40">{result.missed}</span> {" "}
+                      <span className="text-emerald-400/40">
+                        {result.correct}
+                      </span>{" "}
+                      /{" "}
+                      <span className="text-red-400/40">
+                        {result.incorrect}
+                      </span>{" "}
+                      /{" "}
+                      <span className="text-yellow-400/40">
+                        {result.missed}
+                      </span>{" "}
                     </div>
                     <div className="text-xs text-zinc-500">
                       correct/incorrect/extra
@@ -376,7 +397,8 @@ export default function Result({
                         className={cn(
                           "relative group cursor-pointer px-1 py-0.5 rounded transition-colors",
                           {
-                            "bg-neutral-800/70 hover:bg-zinc-800/70 underline underline-offset-4": !isCorrect,
+                            "bg-neutral-800/70 hover:bg-zinc-800/70 underline underline-offset-4":
+                              !isCorrect,
                           }
                         )}
                         key={index}
@@ -469,6 +491,6 @@ export default function Result({
           <RotateCcw className="w-4 h-4 mr-2" /> Retry
         </Button>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

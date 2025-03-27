@@ -9,9 +9,7 @@ import { generateWords } from "@/lib/words-generator";
 
 // const paragraphText = `this is a simple paragraph that does not have any punctuation it flows continuously without any stops or breaks making it a bit challenging to read but still understandable if you focus on the context words just keep coming together forming a long stream of thoughts without interruption which can sometimes make things interesting or even confusing depending on how you look at it`;
 
-
 // const wordsArray = paragraphText.split(" ");
-
 
 type ParagraphWithTimestamp = {
   word: string;
@@ -31,7 +29,7 @@ type ChartData = {
 
 export default function Typing() {
   const { settings } = useSettingsStore();
-  const [text,setText] = useState(generateWords());
+  const [text, setText] = useState(generateWords());
   const [word, setWord] = useState("");
   const [idx, setIdx] = useState(0);
   const [paragraph, setParagraph] = useState<ParagraphWithTimestamp[]>([]);
@@ -53,8 +51,10 @@ export default function Typing() {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 });
-
-  const wordsArray = useMemo(()=>text.split(" "),[text])
+  const [wordsArray, setWordsArray] = useState<string[]>(
+    generateWords().split(" ")
+  );
+  const [opacity, setOpacity] = useState(0);
 
   const updateCaretPosition = useCallback(() => {
     const currentWordRef = wordRefs.current[idx];
@@ -180,13 +180,16 @@ export default function Typing() {
     setIdx(0);
     setParagraph([]);
     setIsTestStarted(false);
-    setIsFocused(false);
+    // setIsFocused(false);
     setWpm(0);
     setStartTime(null);
     setTimeLeft(settings.time);
     setIsCompleted(false);
     setText(generateWords());
     boolCorrect.current = [];
+    const newWords = generateWords();
+    setWordsArray(newWords.split(" "));
+    setOpacity(0); 
   }, [settings.time]);
 
   const calculateAccuracy = useCallback(() => {
@@ -347,18 +350,27 @@ export default function Typing() {
     };
   }, [word, idx, isFocused, updateScrollPosition, updateCaretPosition]);
 
-  useEffect(()=>{
-   const handleTab = (e:KeyboardEvent)=>{
-     if(e.key==="Tab"){
-       e.preventDefault();
-       reset()
-     }
-   }
-   window.addEventListener("keydown",handleTab)
-   return ()=>{
-     window.removeEventListener("keydown",handleTab)
-   }
-  },[])
+  useEffect(() => {
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        reset();
+      }
+    };
+    window.addEventListener("keydown", handleTab);
+    return () => {
+      window.removeEventListener("keydown", handleTab);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (opacity < 1) {
+      const fadeIn = setTimeout(() => {
+        setOpacity((prev) => Math.min(prev + 0.1, 1)); 
+      }, 50); 
+      return () => clearTimeout(fadeIn);
+    }
+  }, [opacity, wordsArray]); 
 
   return !isCompleted ? (
     <div className="w-full h-full flex items-center justify-center bg-black">
@@ -388,14 +400,18 @@ export default function Typing() {
         </div>
         <div
           ref={containerRef}
-          className="w-full  text-neutral-300 relative"
+          className="w-full text-neutral-300 relative"
           tabIndex={0}
           onFocus={() => {
             setIsFocused(true);
           }}
           onBlur={() => setIsFocused(false)}
         >
-          <div
+          <motion.div
+            key={wordsArray.join(" ")}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
             ref={scrollRef}
             className="w-full max-h-[9rem] overflow-y-auto overflow-x-hidden relative"
           >
@@ -421,7 +437,7 @@ export default function Typing() {
                 );
               })}
             </div>
-          </div>
+          </motion.div>
           {isFocused && (
             <motion.div
               layoutId="caret"
@@ -456,7 +472,7 @@ export default function Typing() {
             </div>
           )}
         </div>
-      </div>    
+      </div>
     </div>
   ) : (
     <Result
