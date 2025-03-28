@@ -9,16 +9,16 @@ export interface testResultDB {
   date: Date;
 }
 
-export type ReqEvents =
-  | "USER_JOIN"
-  | "USER_LEAVE "
+export type ResEvents =
+  | "USER_JOINED"
+  | "USER_LEFT"
   | "USER_PROGRESS"
   | "RACE_END"
-  | "USER_DISCONNECT"
-  | "RACE_START";
+  | "USER_DISCONNECTED"
+  | "RACE_STARTED";
 
 export type Payload = {
-  type: ReqEvents;
+  type: ResEvents;
   data: {
     userId: string;
     roomCode: string;

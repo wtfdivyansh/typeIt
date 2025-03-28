@@ -11,7 +11,7 @@ export default async function RoomPage({
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-black text-white">
       <pre>{JSON.stringify(room, null, 2)}</pre>
-      <Room />
+      <Room code={roomId} />
     </div>
   );
 }
