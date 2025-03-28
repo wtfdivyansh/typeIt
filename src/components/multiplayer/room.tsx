@@ -61,16 +61,7 @@ export const Room = ({code}:{code:string}) => {
   return (
     <div className="flex flex-col items-start justify-center h-screen bg-black text-white">
       <div>Room-{isConnected ? "Connected" : "Disconnected"}</div>
-      <div>
-        {players.map((player) => (
-          <div key={player.id} className="flex items-center gap-2">
-            <div>{player.name}</div>
-            <div>
-              <Image src={player.image} alt={player.name} width={32} height={32} />
-            </div>
-          </div>
-        ))}
-      </div>
+     
     </div>
   );
 };
