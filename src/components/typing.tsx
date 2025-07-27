@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { DEFAULT_CHARS } from "@/utils/constants";
 import Result from "./results";
 import { generateWords } from "@/lib/words-generator";
+import { char } from "drizzle-orm/mysql-core";
 
 // const paragraphText = `this is a simple paragraph that does not have any punctuation it flows continuously without any stops or breaks making it a bit challenging to read but still understandable if you focus on the context words just keep coming together forming a long stream of thoughts without interruption which can sometimes make things interesting or even confusing depending on how you look at it`;
 
@@ -15,6 +16,11 @@ type ParagraphWithTimestamp = {
   word: string;
   timeStamp: number;
   wpm: number;
+};
+type charWithTimestamp = {
+  char: string;
+  time: number;
+  isBackspace: boolean;
 };
 type ParaResult = {
   correct: number;
@@ -29,10 +35,11 @@ type ChartData = {
 
 export default function Typing() {
   const { settings } = useSettingsStore();
-  const [text, setText] = useState(generateWords());
+  const [text, setText] = useState(generateWords);
   const [word, setWord] = useState("");
   const [idx, setIdx] = useState(0);
   const [paragraph, setParagraph] = useState<ParagraphWithTimestamp[]>([]);
+  const charPositionRef = useRef<number>(0);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(settings.time);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -42,6 +49,7 @@ export default function Typing() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [wpm, setWpm] = useState(0);
   const chartDataRef = useRef<ChartData[]>([]);
+  const charWithTimestampRef = useRef<charWithTimestamp[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wordRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -121,6 +129,17 @@ export default function Typing() {
         };
         return newParagraph;
       });
+      console.log(value)
+     
+    
+      charWithTimestampRef.current[charPositionRef.current] = {
+        ...charWithTimestampRef.current[charPositionRef.current],
+        char: value[value.length - 1],
+        time: (Date.now() - gameStartTime.current!) / 1000,
+      };  
+      charPositionRef.current++;
+        console.log(charWithTimestampRef.current[charPositionRef.current-1])
+
 
       if (value.endsWith(" ") && value.trim().length > 0) {
         const startTimeOfPrevWord =
@@ -157,6 +176,8 @@ export default function Typing() {
 
   const handleBackspace = useCallback(() => {
     if (idx === 0) return;
+    charWithTimestampRef.current[charPositionRef.current] = {...charWithTimestampRef.current[charPositionRef.current], isBackspace: true};
+  
 
     const isBackspaceToPrev = boolCorrect.current[idx - 1];
 
@@ -181,6 +202,8 @@ export default function Typing() {
     setParagraph([]);
     setIsTestStarted(false);
     // setIsFocused(false);
+    charPositionRef.current = 0;
+    charWithTimestampRef.current = [];
     setWpm(0);
     setStartTime(null);
     setTimeLeft(settings.time);
@@ -413,7 +436,7 @@ export default function Typing() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
             ref={scrollRef}
-            className="w-full max-h-[9rem] overflow-y-auto overflow-x-hidden relative"
+            className="w-full max-h-[9rem] overflow-y-hidden overflow-x-hidden relative"
           >
             <div className="font-mono text-3xl tracking-wide leading-[3rem]">
               {wordsArray.map((word, wordIndex) => {
@@ -464,6 +487,9 @@ export default function Typing() {
               if (e.key === "Backspace" && word === "") {
                 handleBackspace();
               }
+              if (e.key === "Backspace") {
+                charWithTimestampRef.current[charPositionRef.current] = {...charWithTimestampRef.current[charPositionRef.current], isBackspace: true};
+              }
             }}
           />
           {!isFocused && !isTestStarted && (
@@ -483,6 +509,7 @@ export default function Typing() {
       actualWords={wordsArray}
       wordsWithTimestamp={chartDataRef.current}
       reset={reset}
+      replayData={charWithTimestampRef.current}
     />
   );
 }

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 
-
 let socket: WebSocket | null = null;
 
 const getSocket = () => {
@@ -21,30 +20,31 @@ export const useSocket = create<SocketStore>((set) => ({
   socket: null,
   isConnected: false,
   connect: () => {
-    if( socket && socket.readyState === WebSocket.OPEN) {
-        return;
+    if (socket ) {
+      console.log("SOCKET ALREADY INITALIZED")
+      return;
     }
-     const ws = getSocket();
-     set({ socket: ws });
-    ws.onopen = (ws) => {
-      console.log("Connected to server",ws);
-      set({ isConnected: true });
+
+    const ws = getSocket();
+
+    ws.onopen = () => {
+      console.log("Connected to server");
+      set({ socket: ws, isConnected: true });
     };
 
     ws.onclose = () => {
-      set({ isConnected: false });
+      set({ isConnected: false, socket: null });
     };
 
     ws.onerror = (error) => {
       console.error("Socket error:", error);
     };
-
   },
   disconnect: () => {
     if (socket) {
       socket.close();
       socket = null;
-      set({ socket: null });
+      set({ socket: null, isConnected: false });
     }
   },
 }));

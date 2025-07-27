@@ -1,9 +1,9 @@
 "use client";
 import { useSession } from "@/lib/auth-client";
-import { Payload } from "@/lib/types";
 import { useSocket } from "@/store/use-socket";
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import MultiplayerLobby from "./waiting-lobby";
+
 interface Player {
   id: string;
   name: string;
@@ -13,31 +13,24 @@ interface Player {
     accuracy: number;
   };
 }
-export const Room = ({code}:{code:string}) => {
-  const {data,isPending} = useSession()
-  const { socket, isConnected, connect } = useSocket();
+
+export const Room = ({ code }: { code: string }) => {
+  const { data } = useSession();
+  const { socket, isConnected, connect,disconnect } = useSocket();
   const [players, setPlayers] = useState<Player[]>([]);
+
+
   useEffect(() => {
     connect();
-    if (socket) {
-      socket.onmessage = (event) => {
-        const payload = JSON.parse(event.data) 
-        console.log(payload)
-         const {type,users} = payload
-        if (type === "USER_JOINED") {
-          setPlayers([...users]);
-        }
-      };
-    }
+    return ()=> disconnect();
+  }, []);
 
-    return () => {
-      socket?.close();
-    };
-  }, [socket]);
+
   useEffect(() => {
-    if(data && socket){
-      console.log("hehe")
-      socket.send(JSON.stringify({
+    if (data && isConnected && socket) {
+    console.log("SENDING DATA");
+    socket.send(
+      JSON.stringify({
         type: "USER_JOIN",
         data: {
           userId: data.user.id,
@@ -55,13 +48,19 @@ export const Room = ({code}:{code:string}) => {
             accuracy: 0,
           },
         },
-      }));
+      })
+    );
+    console.log("DATA SENT"); 
     }
-  }, [data]);
+  }, [data, isConnected, socket]);
+
+  if (!data) return null;
+
   return (
     <div className="flex flex-col items-start justify-center h-screen bg-black text-white">
-      <div>Room-{isConnected ? "Connected" : "Disconnected"}</div>
-     
+      {/* <div>Room - {isConnected ? "Connected" : "Disconnected"}</div> */}
+      {/* <div>Players joined: {players.length}</div> */}
+        <MultiplayerLobby initialUsers={[]} hostId={data.user.id} code={code} />
     </div>
   );
 };

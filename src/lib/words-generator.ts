@@ -118,7 +118,6 @@ export const generateWords = (count: number = 60) => {
       categories[Math.floor(Math.random() * categories.length)];
     if (ttlBig > 0 && randomCategory === "bigWords") {
       randomCategory = categories[Math.floor(Math.random() * 2)];
-      console.log(randomCategory);
       ttlBig--;
     }
 

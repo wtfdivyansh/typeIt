@@ -10,7 +10,7 @@ export default async function RoomPage({
   const room = await getRoom(roomId);
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-black text-white">
-      <pre>{JSON.stringify(room, null, 2)}</pre>
+      {/* <pre>{JSON.stringify(room, null, 2)}</pre> */}
       <Room code={roomId} />
     </div>
   );

@@ -18,6 +18,7 @@ import { RotateCcw, Trophy, Clock, BarChart2, Zap, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/store/use-settings-store";
+import WatchReplay from "./watch-replay";
 
 interface ResultProps {
   result: {
@@ -37,10 +38,16 @@ interface ResultProps {
   }[];
   actualWords: string[];
   reset: () => void;
+  replayData: replayData[];
 }
 type ChartData = {
   time: number;
   wpm: number;
+};
+type replayData = {
+  char: string;
+  time: number;
+  isBackspace: boolean;
 };
 export default function Result({
   result,
@@ -50,6 +57,7 @@ export default function Result({
   wordsReview,
   actualWords,
   reset,
+  replayData,
 }: ResultProps) {
   const { settings } = useSettingsStore();
   const [activeTab, setActiveTab] = useState("performance");
@@ -95,18 +103,17 @@ export default function Result({
     };
   }, []);
   console.log(chartData);
+  console.log("replayData", replayData);
   return (
     <motion.div
-      initial={{ opacity: 0.5}}
-      animate={{ opacity: 1}}
-      transition={{ duration: 0.1,
-         ease:"circIn"
-       }}
+      initial={{ opacity: 0.5 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.1, ease: "circIn" }}
       className="h-full bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white font-mono p-8 md:p-8"
     >
       <div className="flex justify-end items-center py-6">
         <motion.div
-          initial={{ opacity: 0}}
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
           className="flex items-center gap-3"
@@ -200,7 +207,7 @@ export default function Result({
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-4 bg-zinc-900/50 border border-zinc-800 rounded-xl p-1">
+          <TabsList className="grid grid-cols-5 bg-zinc-900/50 border border-zinc-800 rounded-xl p-1">
             <TabsTrigger
               value="performance"
               className="rounded-lg data-[state=active]:bg-zinc-800"
@@ -225,8 +232,13 @@ export default function Result({
             >
               Review
             </TabsTrigger>
+            <TabsTrigger
+              value="replay"
+              className="rounded-lg data-[state=active]:bg-zinc-800"
+            >
+              Replay
+            </TabsTrigger>
           </TabsList>
-
           <TabsContent value="performance" className="mt-6">
             <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm">
               <CardContent className="p-6">
@@ -380,6 +392,9 @@ export default function Result({
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="replay" className="mt-6">
+            <WatchReplay replayData={replayData} />
           </TabsContent>
           <TabsContent value="review" className="mt-6">
             <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm">

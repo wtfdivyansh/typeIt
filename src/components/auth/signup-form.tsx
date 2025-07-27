@@ -64,7 +64,7 @@ export const SignupForm = () => {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-zinc-400 text-sm">Email</FormLabel>
+              <FormLabel className="text-zinc-400 text-sm">username</FormLabel>
               <FormControl>
                 <div className="relative">
                   <Input
