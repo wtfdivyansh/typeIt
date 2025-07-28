@@ -18,9 +18,10 @@ type ParagraphWithTimestamp = {
   wpm: number;
 };
 type charWithTimestamp = {
+  event_type: "backspace" | "space" | "letter" | "prev_word";
   char: string;
   time: number;
-  isBackspace: boolean;
+  
 };
 type ParaResult = {
   correct: number;
@@ -42,7 +43,6 @@ export default function Typing() {
   const charPositionRef = useRef<number>(0);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(settings.time);
-  const [startTime, setStartTime] = useState<number | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [accuracy, setAccuracy] = useState(0);
   const [result, setResult] = useState<ParaResult | null>(null);
@@ -111,85 +111,134 @@ export default function Typing() {
     }
   }, [idx]);
 
-  const handleChange = useCallback(
-    (value: string) => {
-      if (value.startsWith(" ") || value.trim().length == DEFAULT_CHARS) return;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      console.log(e.key);
+      const value = e.currentTarget.value;
 
-      if (!startTime) {
-        setStartTime(Date.now());
-        setIsTestStarted(true);
+      console.log(charPositionRef.current, "position");
+      if (e.key === "Backspace") {
+        console.log(value);
+        console.log(word);
+        console.log(boolCorrect.current);
+        console.log(idx);
+        if (value === "" && idx > 0) {
+          console.log("insided");
+          const isBackspaceToPrev = boolCorrect.current[idx - 1];
+
+          if (!isBackspaceToPrev) {
+            console.log("back to prev");
+            setIdx((prev) => prev - 1);
+            setParagraph((prev) => {
+              const newParagraph = [...prev];
+              previousWordRef.current = newParagraph[idx - 1].word || "";
+              return newParagraph;
+            });
+            charWithTimestampRef.current[charPositionRef.current] = {
+              event_type: "prev_word",
+              char: " ",
+              time: (Date.now() - gameStartTime.current!)
+            };
+            charPositionRef.current++;
+          }
+
+        
+          
+        } else if (value.length > 0) {
+          charWithTimestampRef.current[charPositionRef.current] = {
+            event_type: "backspace",
+            char: value[value.length - 1],
+            time: (Date.now() - gameStartTime.current!) 
+          };
+          charPositionRef.current++;
+          setWord((prev) => prev.slice(0, -1));
+
+          setParagraph((prev) => {
+            const newParagraph = [...prev];
+            newParagraph[idx] = {
+              word: word.slice(0, -1).trim(),
+              timeStamp: Date.now(),
+              wpm: paragraph[idx]?.wpm || 0,
+            };
+            return newParagraph;
+          });
+        }
+        return;
       }
 
-      setParagraph((prev) => {
-        const newParagraph = [...prev];
-        newParagraph[idx] = {
-          word: value.trim(),
-          timeStamp: Date.now(),
-          wpm: paragraph[idx]?.wpm || 0,
-        };
-        return newParagraph;
-      });
-      console.log(value)
-     
-    
-      charWithTimestampRef.current[charPositionRef.current] = {
-        ...charWithTimestampRef.current[charPositionRef.current],
-        char: value[value.length - 1],
-        time: (Date.now() - gameStartTime.current!) / 1000,
-      };  
-      charPositionRef.current++;
-        console.log(charWithTimestampRef.current[charPositionRef.current-1])
+      // Handle space key
+      if (e.key === " ") {
+        e.preventDefault();
+        if (value.trim().length > 0) {
+          const startTimeOfPrevWord =
+            idx === 0 ? gameStartTime.current! : paragraph[idx - 1].timeStamp;
 
+          const elapsedTime = (Date.now() - startTimeOfPrevWord) / 1000 / 60;
 
-      if (value.endsWith(" ") && value.trim().length > 0) {
-        const startTimeOfPrevWord =
-          idx === 0 ? gameStartTime.current! : paragraph[idx - 1].timeStamp;
+          const wordWPM =
+            elapsedTime > 0
+              ? Math.floor(wordsArray[idx].length / 5 / elapsedTime)
+              : 0;
 
-        const elapsedTime = (Date.now() - startTimeOfPrevWord) / 1000 / 60;
+          boolCorrect.current[idx] = value.trim() === wordsArray[idx];
+          setParagraph((prev) => {
+            const newParagraph = [...prev];
+            newParagraph[idx] = {
+              ...newParagraph[idx],
+              wpm: wordWPM,
+            };
+            return newParagraph;
+          });
+          charWithTimestampRef.current[charPositionRef.current] = {
+            event_type: "space",
+            char: " ",
+            time: (Date.now() - gameStartTime.current!) ,
+            
+          };
+          charPositionRef.current++;
 
-        const wordWPM =
-          elapsedTime > 0
-            ? Math.floor(wordsArray[idx].length / 5 / elapsedTime)
-            : 0;
+          setIdx((prev) => prev + 1);
+          setWord("");
+        }
+        return;
+      }
 
-        boolCorrect.current[idx] = value.trim() === wordsArray[idx];
+      // Handle regular character input
+      if(e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        if (value.length >= DEFAULT_CHARS) return;
+
+        if (!gameStartTime.current) {
+          gameStartTime.current = Date.now();
+          setIsTestStarted(true);
+        }
+
+        const newValue = value + e.key;
+
         setParagraph((prev) => {
           const newParagraph = [...prev];
           newParagraph[idx] = {
-            ...newParagraph[idx],
-            wpm: wordWPM,
+            word: newValue.trim(),
+            timeStamp: Date.now(),
+            wpm: paragraph[idx]?.wpm || 0,
           };
           return newParagraph;
         });
 
-        setIdx((prev) => prev + 1);
-        setWord("");
-      } else {
+        charWithTimestampRef.current[charPositionRef.current] = {
+          event_type: "letter",
+          char: e.key,
+          time: (Date.now() - gameStartTime.current!),
+        };
+        charPositionRef.current++;
+
         if (idx === 0 && gameStartTime.current === null) {
           gameStartTime.current = Date.now();
         }
-        setWord(value);
+        setWord(newValue);
       }
     },
-    [idx, paragraph.length, startTime]
+    [idx, paragraph.length, wordsArray, word]
   );
-
-  const handleBackspace = useCallback(() => {
-    if (idx === 0) return;
-    charWithTimestampRef.current[charPositionRef.current] = {...charWithTimestampRef.current[charPositionRef.current], isBackspace: true};
-  
-
-    const isBackspaceToPrev = boolCorrect.current[idx - 1];
-
-    if (!isBackspaceToPrev) {
-      setIdx((prev) => prev - 1);
-      setParagraph((prev) => {
-        const newParagraph = [...prev];
-        previousWordRef.current = newParagraph[idx - 1].word || "";
-        return newParagraph;
-      });
-    }
-  }, [idx]);
 
   const reset = useCallback(() => {
     if (timerRef.current) {
@@ -205,14 +254,14 @@ export default function Typing() {
     charPositionRef.current = 0;
     charWithTimestampRef.current = [];
     setWpm(0);
-    setStartTime(null);
+    gameStartTime.current = null; 
     setTimeLeft(settings.time);
     setIsCompleted(false);
     setText(generateWords());
     boolCorrect.current = [];
     const newWords = generateWords();
     setWordsArray(newWords.split(" "));
-    setOpacity(0); 
+    setOpacity(0);
   }, [settings.time]);
 
   const calculateAccuracy = useCallback(() => {
@@ -389,11 +438,11 @@ export default function Typing() {
   useEffect(() => {
     if (opacity < 1) {
       const fadeIn = setTimeout(() => {
-        setOpacity((prev) => Math.min(prev + 0.1, 1)); 
-      }, 50); 
+        setOpacity((prev) => Math.min(prev + 0.1, 1));
+      }, 50);
       return () => clearTimeout(fadeIn);
     }
-  }, [opacity, wordsArray]); 
+  }, [opacity, wordsArray]);
 
   return !isCompleted ? (
     <div className="w-full h-full flex items-center justify-center bg-black">
@@ -481,16 +530,9 @@ export default function Typing() {
             ref={inputRef}
             className="absolute inset-0 opacity-0"
             value={word}
+            readOnly
             disabled={!isFocused}
-            onChange={(e) => handleChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Backspace" && word === "") {
-                handleBackspace();
-              }
-              if (e.key === "Backspace") {
-                charWithTimestampRef.current[charPositionRef.current] = {...charWithTimestampRef.current[charPositionRef.current], isBackspace: true};
-              }
-            }}
+            onKeyDown={handleKeyDown}
           />
           {!isFocused && !isTestStarted && (
             <div className="absolute inset-0 bg-transparent backdrop-blur-sm transition-opacity duration-300 flex items-center justify-center text-white text-2xl font-mono">

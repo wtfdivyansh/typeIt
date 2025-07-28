@@ -45,9 +45,10 @@ type ChartData = {
   wpm: number;
 };
 type replayData = {
+  event_type: "backspace" | "space" | "letter" | "prev_word";
   char: string;
   time: number;
-  isBackspace: boolean;
+  
 };
 export default function Result({
   result,
