@@ -107,6 +107,7 @@ export default function Result({
   }, []);
   console.log(chartData);
   console.log("replayData", replayData);
+  console.log("words review", wordsReview);
   return (
     <motion.div
       initial={{ opacity: 0.5 }}
@@ -397,7 +398,7 @@ export default function Result({
             </Card>
           </TabsContent>
           <TabsContent value="replay" className="mt-6">
-            <WatchReplay replayData={replayData} text={actualWords.slice(0, wordsReview.length)} boolCorrect={boolCorrect}
+            <WatchReplay replayData={replayData} text={actualWords.slice(0, wordsReview.length )} boolCorrect={boolCorrect}
             wordsWithTimestamp={chartData}
             />
           </TabsContent>
