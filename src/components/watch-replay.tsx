@@ -70,7 +70,6 @@ export default function WatchReplay({
         paraIdx: 0,
         currMs: 0,
       };
-      timerRef.current = null;
       return;
     }
     if (!timerRef.current) {
@@ -81,7 +80,6 @@ export default function WatchReplay({
         if (paraIdx >= text.length - 1 && idx >= replayData.length - 1) {
           console.log("end complete ");
           setWatching(false);
-          clearInterval(timerRef.current!);
           return;
         }
 
