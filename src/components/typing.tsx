@@ -166,7 +166,6 @@ export default function Typing() {
         return;
       }
 
-      // Handle space key
       if (e.key === " ") {
         e.preventDefault();
         if (value.trim().length > 0) {
@@ -203,7 +202,6 @@ export default function Typing() {
         return;
       }
 
-      // Handle regular character input
       if(e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
         if (value.length >= DEFAULT_CHARS) return;
 
@@ -552,6 +550,7 @@ export default function Typing() {
       wordsWithTimestamp={chartDataRef.current}
       reset={reset}
       replayData={charWithTimestampRef.current}
+      boolCorrect={boolCorrect}
     />
   );
 }

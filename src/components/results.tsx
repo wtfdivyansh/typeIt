@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, RefObject } from "react";
 import {
   XAxis,
   YAxis,
@@ -39,6 +39,7 @@ interface ResultProps {
   actualWords: string[];
   reset: () => void;
   replayData: replayData[];
+  boolCorrect: RefObject<Boolean[]>;
 }
 type ChartData = {
   time: number;
@@ -59,6 +60,7 @@ export default function Result({
   actualWords,
   reset,
   replayData,
+  boolCorrect,
 }: ResultProps) {
   const { settings } = useSettingsStore();
   const [activeTab, setActiveTab] = useState("performance");
@@ -78,13 +80,13 @@ export default function Result({
     const averagedData = Object.entries(groupedData).map(
       ([timeStamp, { sumWpm, count }]) => ({
         time: Number(timeStamp) + 1,
-        wpm: sumWpm / count,
+        wpm: Math.floor(sumWpm / count),
       })
     );
 
     setChartData(averagedData);
   }, [wordsWithTimestamp]);
-
+ console.log(chartData)
   useEffect(() => {
     const wpmTimer = setTimeout(() => {
       setAnimatedWpm(wpm);
@@ -395,7 +397,9 @@ export default function Result({
             </Card>
           </TabsContent>
           <TabsContent value="replay" className="mt-6">
-            <WatchReplay replayData={replayData} />
+            <WatchReplay replayData={replayData} text={actualWords.slice(0, wordsReview.length)} boolCorrect={boolCorrect}
+            wordsWithTimestamp={chartData}
+            />
           </TabsContent>
           <TabsContent value="review" className="mt-6">
             <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm">

@@ -1,7 +1,8 @@
 "use client";
-
-import { M_PLUS_1 } from "next/font/google";
-import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
+import { Pause, Play, RefreshCcw } from "lucide-react";
+import { memo, RefObject, useEffect, useRef, useState } from "react";
+import { set } from "react-hook-form";
 
 type ReplayData = {
   event_type: "backspace" | "space" | "letter" | "prev_word";
@@ -11,23 +12,56 @@ type ReplayData = {
 
 export default function WatchReplay({
   replayData,
+  text,
+  boolCorrect,
+  wordsWithTimestamp,
 }: {
+  text: string[];
+  wordsWithTimestamp: {
+    time: number;
+    wpm: number;
+  }[]
+  boolCorrect: RefObject<Boolean[]>;
   replayData: ReplayData;
 }) {
   const [paragraph, setParagraph] = useState<string[]>([]);
- 
-
+  const [watching, setWatching] = useState(false);
+  const [index, setIndex] = useState(0);
+  const [wpm, setWpm] = useState(0);
+  const prevState = useRef({
+    idx: -1,
+    paraIdx: 0,
+    currMs: 0,
+  });
+ function reset() {
+    setParagraph([]);
+    setIndex(0);
+    setWpm(0);
+    setWatching(false);
+    prevState.current = {
+      idx: -1,
+      paraIdx: 0,
+      currMs: 0,
+    };
+  }
   useEffect(() => {
-    let idx = -1;
-    let paraIdx = 0 
-    let currMs = 0
+    if (!watching || prevState.current.paraIdx >= text.length -1) return;
+    let idx = prevState.current.idx;
+    let paraIdx = prevState.current.paraIdx;
+    let currMs = prevState.current.currMs;
+    let elapsedIdx =0;
+
     const intervalId = setInterval(() => {
-      if (idx >= replayData.length-1) {
+      if (idx >= replayData.length - 1) {
         clearInterval(intervalId);
         return;
       }
+      if((wordsWithTimestamp[elapsedIdx].time *1000) <= currMs) {
+        setWpm(wordsWithTimestamp[elapsedIdx].wpm);
+        elapsedIdx++;
+      }
 
-      if(idx != -1 && replayData[idx].time > currMs) {
+      if (idx != -1 && replayData[idx].time > currMs) {
         currMs += 50;
         return;
       }
@@ -35,8 +69,7 @@ export default function WatchReplay({
       setParagraph((prev) => {
         const newParagraph = [...prev];
         let lastWord = newParagraph[paraIdx] || "";
-
-        console.log(replayData[idx],"replayData");
+        console.log("lastWord", lastWord, idx);
 
         switch (replayData[idx].event_type) {
           case "backspace":
@@ -45,16 +78,17 @@ export default function WatchReplay({
             break;
           case "space":
             newParagraph.push("");
+            setIndex((prev) => prev + 1);
             paraIdx++;
             break;
           case "prev_word":
             newParagraph.pop();
+            setIndex((prev) => prev - 1);
             paraIdx--;
             break;
           case "letter":
-            console.log("beofre", lastWord);
             lastWord += replayData[idx].char;
-            console.log("after", lastWord);
+
             newParagraph[paraIdx] = lastWord;
             break;
         }
@@ -62,19 +96,115 @@ export default function WatchReplay({
         return newParagraph;
       });
       idx++;
-      currMs += 50
+      currMs += 50;
+      prevState.current = {
+        idx,
+        paraIdx,
+        currMs,
+      };
     }, 50);
 
     return () => clearInterval(intervalId);
-  }, [replayData]);
+  }, [replayData,watching]);
 
   useEffect(() => {
-    console.log(paragraph);
+    // console.log(paragraph);
+    // console.log(replayData)
+
   }, [paragraph]);
 
   return (
     <div>
-      <h1 className="text-red-500 ">{paragraph.join(" ")}</h1>
+      <div className="flex justify-start items-start gap-2 ">
+          <div className="flex items-center gap-2">
+            <span className="text-neutral-600 font-semibold font-mono">{wpm} WPM</span>
+          </div>
+          <button
+            className={cn(
+              "bg-transparent text-neutral-600  font-bold  rounded-full cursor-pointer transition-colors duration-200 hover:text-neutral-400",
+              {
+                watching: "text-neutral-300",
+              }
+            )}
+            onClick={() => setWatching((prev) => !prev)}
+          >
+            {watching ? (
+              <Pause className="w-6 h-6" />
+            ) : (
+              <Play className="w-6 h-6" />
+            )}
+          </button>
+          <button className="bg-transparent text-neutral-600  font-bold  rounded-full cursor-pointer transition-colors duration-200 hover:text-neutral-400">
+            <RefreshCcw className="w-6 h-6" onClick={reset} />
+          </button>
+       
+      </div>
+      <div className="">
+        {text.map((word, wordIndex) => {
+          const typedWord = paragraph[wordIndex] || "";
+          const isUnderlined =
+            typedWord.length > word.length ||
+            (!boolCorrect.current[wordIndex] && index > wordIndex);
+
+          return (
+            <Word
+              key={wordIndex}
+              word={word}
+              typedWord={typedWord}
+              isUnderlined={isUnderlined}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+export const Word = memo(
+  ({
+    word,
+    typedWord,
+    isUnderlined,
+  }: {
+    word: string;
+    typedWord: string;
+    isUnderlined: boolean;
+  }) => {
+    const extraChars =
+      typedWord.length > word.length
+        ? typedWord.slice(word.length).split("")
+        : [];
+
+    return (
+      <div
+        className={cn("inline-block mr-4 transition-all  duration-200", {
+          "underline underline-offset-4": isUnderlined,
+        })}
+      >
+        {word.split("").map((letter, letterIndex) => {
+          const actualLetter = word[letterIndex];
+          const typedLetter = typedWord[letterIndex] || " ";
+
+          return (
+            <span
+              key={letterIndex}
+              className={cn("text-neutral-600 font-mono transition-colors duration-200", {
+                "text-neutral-100": actualLetter === typedLetter,
+                "text-red-400":
+                  actualLetter !== typedLetter && typedLetter !== " ",
+              })}
+            >
+              {letter}
+            </span>
+          );
+        })}
+
+        {extraChars.map((letter, extraIndex) => (
+          <span key={extraIndex} className="text-orange-700 font-mono transition-all duration-100">
+            {letter}
+          </span>
+        ))}
+      </div>
+    );
+  }
+);
