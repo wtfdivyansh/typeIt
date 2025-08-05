@@ -2,7 +2,7 @@
 import { useSettingsStore } from "@/store/use-settings-store";
 import { cn } from "@/utils/utils";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { DEFAULT_CHARS } from "@/utils/constants";
 import Result from "./results";
 import { generateWords } from "@/lib/words-generator";
@@ -21,7 +21,6 @@ type charWithTimestamp = {
   event_type: "backspace" | "space" | "letter" | "prev_word";
   char: string;
   time: number;
-  
 };
 type ParaResult = {
   correct: number;
@@ -62,7 +61,6 @@ export default function Typing() {
   const [wordsArray, setWordsArray] = useState<string[]>(
     generateWords().split(" ")
   );
-  const [opacity, setOpacity] = useState(0);
 
   const updateCaretPosition = useCallback(() => {
     const currentWordRef = wordRefs.current[idx];
@@ -137,18 +135,15 @@ export default function Typing() {
             charWithTimestampRef.current[charPositionRef.current] = {
               event_type: "prev_word",
               char: " ",
-              time: (Date.now() - gameStartTime.current!)
+              time: Date.now() - gameStartTime.current!,
             };
             charPositionRef.current++;
           }
-
-        
-          
         } else if (value.length > 0) {
           charWithTimestampRef.current[charPositionRef.current] = {
             event_type: "backspace",
             char: value[value.length - 1],
-            time: (Date.now() - gameStartTime.current!) 
+            time: Date.now() - gameStartTime.current!,
           };
           charPositionRef.current++;
           setWord((prev) => prev.slice(0, -1));
@@ -191,8 +186,7 @@ export default function Typing() {
           charWithTimestampRef.current[charPositionRef.current] = {
             event_type: "space",
             char: " ",
-            time: (Date.now() - gameStartTime.current!) ,
-            
+            time: Date.now() - gameStartTime.current!,
           };
           charPositionRef.current++;
 
@@ -202,7 +196,7 @@ export default function Typing() {
         return;
       }
 
-      if(e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
         if (value.length >= DEFAULT_CHARS) return;
 
         if (!gameStartTime.current) {
@@ -225,7 +219,7 @@ export default function Typing() {
         charWithTimestampRef.current[charPositionRef.current] = {
           event_type: "letter",
           char: e.key,
-          time: (Date.now() - gameStartTime.current!),
+          time: Date.now() - gameStartTime.current!,
         };
         charPositionRef.current++;
 
@@ -252,14 +246,13 @@ export default function Typing() {
     charPositionRef.current = 0;
     charWithTimestampRef.current = [];
     setWpm(0);
-    gameStartTime.current = null; 
+    gameStartTime.current = null;
     setTimeLeft(settings.time);
     setIsCompleted(false);
     setText(generateWords());
     boolCorrect.current = [];
     const newWords = generateWords();
     setWordsArray(newWords.split(" "));
-    setOpacity(0);
   }, [settings.time]);
 
   const calculateAccuracy = useCallback(() => {
@@ -391,6 +384,7 @@ export default function Typing() {
       inputRef.current?.focus();
     }
   }, [isFocused]);
+
   useEffect(() => {
     calculateAccuracy();
   }, [word]);
@@ -432,15 +426,6 @@ export default function Typing() {
       window.removeEventListener("keydown", handleTab);
     };
   }, []);
-
-  useEffect(() => {
-    if (opacity < 1) {
-      const fadeIn = setTimeout(() => {
-        setOpacity((prev) => Math.min(prev + 0.1, 1));
-      }, 50);
-      return () => clearTimeout(fadeIn);
-    }
-  }, [opacity, wordsArray]);
 
   return !isCompleted ? (
     <div className="w-full h-full flex items-center justify-center bg-black">
@@ -508,22 +493,24 @@ export default function Typing() {
               })}
             </div>
           </motion.div>
-          {isFocused && (
-            <motion.div
-              layoutId="caret"
-              className="bg-sky-300/80 h-10 w-[3px] absolute"
-              style={{
-                top: caretPosition.y,
-                left: caretPosition.x,
-              }}
-              transition={{
-                type: "tween",
-                damping: 20,
-                stiffness: 300,
-                duration: 0.1,
-              }}
-            />
-          )}
+
+          <motion.div
+            className="bg-teal-300/80 h-10 w-[3px] absolute rounded-full "
+            style={{
+              opacity: isFocused  ? 1 : 0,
+            }}
+            animate={{
+              top: caretPosition.y,
+              left: caretPosition.x,
+            }}
+            transition={{
+              type: "tween",
+              damping: 20,
+              stiffness: 300,
+              duration: 0.1,
+            }}
+          />
+
           <input
             ref={inputRef}
             className="absolute inset-0 opacity-0"
@@ -532,11 +519,22 @@ export default function Typing() {
             disabled={!isFocused}
             onKeyDown={handleKeyDown}
           />
-          {!isFocused && !isTestStarted && (
-            <div className="absolute inset-0 bg-transparent backdrop-blur-sm transition-opacity duration-300 flex items-center justify-center text-white text-2xl font-mono">
-              Click here to start
-            </div>
-          )}
+          <AnimatePresence>
+            {!isFocused && !isTestStarted && (
+              <motion.div
+                className="absolute inset-0 bg-transparent backdrop-blur-sm transition-opacity duration-1000 flex items-center justify-center text-white text-2xl font-mono "
+                exit={{
+                  opacity: 0,
+                }}
+                transition={{
+                  duration: 0.3,
+                  ease: "easeInOut",
+                }}
+              >
+                Click here to start
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
@@ -586,11 +584,14 @@ export const Word = memo(
           return (
             <span
               key={letterIndex}
-              className={cn("text-neutral-600 font-mono", {
-                "text-neutral-100": actualLetter === typedLetter,
-                "text-red-400":
-                  actualLetter !== typedLetter && typedLetter !== " ",
-              })}
+              className={cn(
+                "text-neutral-600 font-mono transition-colors duration-100",
+                {
+                  "text-neutral-100": actualLetter === typedLetter,
+                  "text-red-400":
+                    actualLetter !== typedLetter && typedLetter !== " ",
+                }
+              )}
             >
               {letter}
             </span>
@@ -598,7 +599,10 @@ export const Word = memo(
         })}
 
         {extraChars.map((letter, extraIndex) => (
-          <span key={extraIndex} className="text-orange-700 font-mono">
+          <span
+            key={extraIndex}
+            className="text-orange-700 font-mono transition-colors duration-100"
+          >
             {letter}
           </span>
         ))}

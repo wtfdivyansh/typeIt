@@ -112,7 +112,7 @@ export default function Result({
     <motion.div
       initial={{ opacity: 0.5 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.1, ease: "circIn" }}
+      transition={{ duration: 0.4 , ease: "circIn" }}
       className="h-full bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white font-mono p-8 md:p-8"
     >
       <div className="flex justify-end items-center py-6">

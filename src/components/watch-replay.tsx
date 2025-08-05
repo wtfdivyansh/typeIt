@@ -39,6 +39,8 @@ export default function WatchReplay({
     setParagraph([]);
     setIndex(0);
     setWpm(0);
+    setWatching(false);
+    clearInterval(timerRef.current!);
     prevState.current = {
       idx: -1,
       paraIdx: 0,
