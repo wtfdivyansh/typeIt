@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, RefObject } from "react";
+import { useState, useEffect, useCallback, RefObject, useMemo } from "react";
 import {
   XAxis,
   YAxis,
@@ -49,8 +49,53 @@ type replayData = {
   event_type: "backspace" | "space" | "letter" | "prev_word";
   char: string;
   time: number;
-  
 };
+
+type PerCharStats = {
+  [char: string]: {
+    correct: number;
+    incorrect: number;
+    missed: number;
+  };
+};
+
+export function getPerCharacterStats(
+  typedWords: string[],
+  actualWords: string[]
+): PerCharStats {
+  const stats: PerCharStats = {};
+
+  const update = (char: string, key: "correct" | "incorrect" | "missed") => {
+    if (!stats[char]) {
+      stats[char] = { correct: 0, incorrect: 0, missed: 0 };
+    }
+    stats[char][key]++;
+  };
+
+  for (let i = 0; i < actualWords.length; i++) {
+    const typed = typedWords[i] || "";
+    const actual = actualWords[i] || "";
+
+    const maxLen = Math.max(typed.length, actual.length);
+
+    for (let j = 0; j < maxLen; j++) {
+      const typedChar = typed[j];
+      const actualChar = actual[j];
+
+      if (typedChar === undefined && actualChar !== undefined) {
+        update(actualChar, "missed");
+      } else if (typedChar !== actualChar) {
+        if (typedChar !== undefined) update(typedChar, "incorrect");
+        if (actualChar !== undefined) update(actualChar, "missed");
+      } else if (typedChar === actualChar) {
+        update(actualChar, "correct");
+      }
+    }
+  }
+
+  return stats;
+}
+
 export default function Result({
   result,
   accuracy,
@@ -67,6 +112,10 @@ export default function Result({
   const [animatedWpm, setAnimatedWpm] = useState(0);
   const [animatedAcc, setAnimatedAcc] = useState(0);
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  const perCharStats = useMemo(() => {
+    return getPerCharacterStats(wordsReview.map((w) => w.word), actualWords.slice(0, wordsReview.length-1));
+  }, [wordsReview, actualWords]);
+  
   const updateChartData = useCallback(() => {
     const groupedData = wordsWithTimestamp.reduce((acc, { time, wpm }) => {
       if (!acc[time]) {
@@ -86,7 +135,7 @@ export default function Result({
 
     setChartData(averagedData);
   }, [wordsWithTimestamp]);
- console.log(chartData)
+  console.log(chartData);
   useEffect(() => {
     const wpmTimer = setTimeout(() => {
       setAnimatedWpm(wpm);
@@ -99,6 +148,7 @@ export default function Result({
     const chartTimer = setTimeout(() => {
       updateChartData();
     }, 500);
+
     return () => {
       clearTimeout(wpmTimer);
       clearTimeout(accTimer);
@@ -108,11 +158,12 @@ export default function Result({
   console.log(chartData);
   console.log("replayData", replayData);
   console.log("words review", wordsReview);
+  console.log("perCharStats", perCharStats);
   return (
     <motion.div
       initial={{ opacity: 0.5 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 , ease: "circIn" }}
+      transition={{ duration: 0.4, ease: "circIn" }}
       className="h-full bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white font-mono p-8 md:p-8"
     >
       <div className="flex justify-end items-center py-6">
@@ -398,8 +449,11 @@ export default function Result({
             </Card>
           </TabsContent>
           <TabsContent value="replay" className="mt-6">
-            <WatchReplay replayData={replayData} text={actualWords.slice(0, wordsReview.length )} boolCorrect={boolCorrect}
-            wordsWithTimestamp={chartData}
+            <WatchReplay
+              replayData={replayData}
+              text={actualWords.slice(0, wordsReview.length)}
+              boolCorrect={boolCorrect}
+              wordsWithTimestamp={chartData}
             />
           </TabsContent>
           <TabsContent value="review" className="mt-6">
